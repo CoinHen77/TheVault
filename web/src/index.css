@@ -1,0 +1,23 @@
+@import 'tailwindcss';
+
+/* Dark green / black with gold accents (SPEC.md §7). Refined in Milestone 5. */
+@theme {
+  --color-vault-black: #060907;
+  --color-vault-green-900: #0a1f16;
+  --color-vault-green-800: #0f3325;
+  --color-vault-green-700: #14543b;
+  --color-vault-gold: #d4af37;
+  --color-vault-gold-soft: #f0d98c;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background-color: var(--color-vault-black);
+  color: var(--color-vault-gold-soft);
+  -webkit-font-smoothing: antialiased;
+}

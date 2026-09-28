@@ -1,0 +1,18 @@
+node_modules/
+dist/
+/functions/lib/
+.emulator-data/
+*.log
+firebase-debug.log*
+firestore-debug.log*
+ui-debug.log*
+database-debug.log*
+pubsub-debug.log*
+.firebase/
+.env
+.env.local
+.DS_Store
+coverage/
+
+# TypeScript incremental build info
+*.tsbuildinfo

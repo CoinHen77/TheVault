@@ -1,0 +1,20 @@
+rules_version = '2';
+
+// MILESTONE 1 PLACEHOLDER — deny everything.
+//
+// Milestone 4 replaces this file with the real rules from SPEC.md §6:
+//   - clients never write buyIns, ledger, standings, bookBets, money fields
+//     or pick result/units
+//   - players/{uid}: read any, write only your own displayName
+//   - picks/{uid}: visible to the owner, to admins, or once the week is locked
+//   - bookBets: readable by signed-in players once the week is locked
+//
+// Denying by default is deliberate: nothing should be able to reach Firestore
+// from a client until those rules exist.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

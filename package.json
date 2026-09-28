@@ -1,0 +1,30 @@
+{
+  "name": "thevault",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "workspaces": [
+    "shared",
+    "functions",
+    "web",
+    "scripts"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "npm run build -w @vault/shared && npm run build -w @vault/functions && npm run build -w @vault/web",
+    "build:shared": "npm run build -w @vault/shared",
+    "dev": "npm run dev -w @vault/web",
+    "emulators": "npm run build:shared && npm run build -w @vault/functions && firebase emulators:start",
+    "test": "npm run test -w @vault/shared",
+    "test:rules": "echo \"(no rules tests yet — added in Milestone 4)\" && exit 0",
+    "seed": "npm run build:shared && node scripts/seed.js",
+    "typecheck": "npm run typecheck -w @vault/shared && npm run typecheck -w @vault/functions && npm run typecheck -w @vault/web",
+    "emulators:persist": "npm run build:shared && npm run build -w @vault/functions && node -e \"require('fs').mkdirSync('.emulator-data',{recursive:true})\" && firebase emulators:start --import=./.emulator-data --export-on-exit=./.emulator-data"
+  },
+  "devDependencies": {
+    "firebase-tools": "^14.24.1",
+    "typescript": "^5.9.3"
+  }
+}
