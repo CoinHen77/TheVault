@@ -14,6 +14,7 @@ import { onCall } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { SHARED_VERSION } from '@vault/shared';
 
+import { rejectUninvitedUsers } from './auth.js';
 import { isAdminRequest, requireAdmin, requireUid } from './context.js';
 import { markBuyInPaidLogic, unmarkBuyInLogic } from './logic/buyIns.js';
 import {
@@ -129,3 +130,6 @@ export const deleteBookBet = onCall((request) => {
 export const lockDueWeeks = onSchedule('every 5 minutes', async () => {
   await lockDueWeeksLogic(db());
 });
+
+/** SPEC.md §6 membership gate. */
+export { rejectUninvitedUsers };

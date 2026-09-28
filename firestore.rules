@@ -1,20 +1,81 @@
 rules_version = '2';
 
-// MILESTONE 1 PLACEHOLDER — deny everything.
+// SPEC.md §6 — see also CLAUDE.md ("Clients never write money fields,
+// results, units, standings, ledger entries, buy-ins or book bets").
 //
-// Milestone 4 replaces this file with the real rules from SPEC.md §6:
-//   - clients never write buyIns, ledger, standings, bookBets, money fields
-//     or pick result/units
-//   - players/{uid}: read any, write only your own displayName
-//   - picks/{uid}: visible to the owner, to admins, or once the week is locked
-//   - bookBets: readable by signed-in players once the week is locked
-//
-// Denying by default is deliberate: nothing should be able to reach Firestore
-// from a client until those rules exist.
+// Every money-affecting collection is `allow write: if false` here: those
+// writes only ever happen through Cloud Functions using the Admin SDK, which
+// bypasses these rules entirely. Denying client writes on those paths is
+// what makes that guarantee real instead of just a convention.
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if false;
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.admin == true;
+    }
+
+    function isSelf(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function weekStatus(seasonId, weekId) {
+      return get(/databases/$(database)/documents/seasons/$(seasonId)/weeks/$(weekId)).data.status;
+    }
+
+    // players/{uid} — read any, but the doc is created server-side by the
+    // beforeUserCreated blocking function; a client may only ever update
+    // their own displayName.
+    match /players/{uid} {
+      allow read: if isSignedIn();
+      allow update: if isSelf(uid)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName']);
+      allow create, delete: if false;
+    }
+
+    // invites/{email} — Admin-managed sign-up allowlist.
+    match /invites/{email} {
+      allow read, write: if isAdmin();
+    }
+
+    match /seasons/{seasonId} {
+      allow read: if isSignedIn();
+      allow write: if false; // createSeason / finalizeSeason only
+
+      match /weeks/{weekId} {
+        allow read: if isSignedIn();
+        allow write: if false; // createWeek / lockDueWeeks / closeWeek / etc. only
+
+        match /buyIns/{uid} {
+          allow read: if isSignedIn();
+          allow write: if false; // markBuyInPaid / unmarkBuyIn only
+        }
+
+        // Hidden from other players until the week locks (SPEC.md §1.1);
+        // visible to the owner and to Admins at any time.
+        match /picks/{uid} {
+          allow read: if isSelf(uid) || isAdmin() || weekStatus(seasonId, weekId) != 'open';
+          allow write: if false; // submitPick / adminSubmitPick / gradePick only
+        }
+
+        match /bookBets/{betId} {
+          allow read: if isSignedIn() && weekStatus(seasonId, weekId) != 'open';
+          allow write: if false; // placeBookBet / updateBookBet / deleteBookBet / gradeBookBet only
+        }
+      }
+
+      match /ledger/{entryId} {
+        allow read: if isSignedIn();
+        allow write: if false; // every ledger entry is written by a function
+      }
+
+      match /standings/{uid} {
+        allow read: if isSignedIn();
+        allow write: if false; // maintained by closeWeek
+      }
     }
   }
 }

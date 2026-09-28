@@ -117,7 +117,7 @@ CLAUDE.md
   - Pass every guard in §9.3.
   - Show a second week's buy-in issuing 13.333333 shares at $0.75.
 
-### [ ] 4. Security rules & auth gate
+### [x] 4. Security rules & auth gate
 - Write `firestore.rules` per SPEC.md §6.
 - Add the `invites/{email}` collection and a `beforeUserCreated` blocking function that rejects anyone not invited.
 - Add a script to set the Admin custom claim.

@@ -53,6 +53,17 @@ export interface Player {
   createdAt: TimestampLike;
 }
 
+/**
+ * invites/{email} — doc id is the lowercased invited email. SPEC.md §6:
+ * an allowlist the Admin manages; `beforeUserCreated` rejects sign-up for
+ * any email without a doc here.
+ */
+export interface Invite {
+  invitedBy: string;
+  invitedAt: TimestampLike;
+  displayName?: string;
+}
+
 /** seasons/{seasonId} */
 export interface Season {
   name: string;

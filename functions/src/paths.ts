@@ -9,6 +9,11 @@ export function playerDoc(db: Firestore, uid: string) {
   return db.collection('players').doc(uid);
 }
 
+/** `email` must already be lowercased — callers own that normalization. */
+export function inviteDoc(db: Firestore, email: string) {
+  return db.collection('invites').doc(email);
+}
+
 export function seasonDoc(db: Firestore, seasonId: string) {
   return db.collection('seasons').doc(seasonId);
 }
