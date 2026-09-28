@@ -10,9 +10,9 @@ import { connectFunctionsEmulator, getFunctions } from 'firebase/functions';
  */
 const firebaseConfig: FirebaseOptions = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY ?? 'emulator-api-key',
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN ?? 'the-vault-dev.firebaseapp.com',
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID ?? 'the-vault-dev',
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET ?? 'the-vault-dev.appspot.com',
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN ?? 'the-vault-f417a.firebaseapp.com',
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID ?? 'the-vault-f417a',
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET ?? 'the-vault-f417a.appspot.com',
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID ?? '000000000000',
   appId: import.meta.env.VITE_FIREBASE_APP_ID ?? '1:000000000000:web:0000000000000000000000',
 };

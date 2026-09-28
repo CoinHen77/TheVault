@@ -144,7 +144,7 @@ CLAUDE.md
 - Start grading, grade picks and book bets, close the week (showing the Book decision and its reason), and override the Bookholder.
 - **Done when:** Zach can run a full week as Admin in the emulators from season creation through close.
 
-### [ ] 7. Deploy (only when Zach asks)
+### [x] 7. Deploy (only when Zach asks)
 - Deploy the rules, indexes, functions and hosting.
 - Walk Zach through:
   1. Setting his Admin claim.

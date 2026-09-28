@@ -30,7 +30,7 @@ if (useEmulator) {
   process.env.FIRESTORE_EMULATOR_HOST ??= '127.0.0.1:8080';
 }
 
-const PROJECT_ID = process.env.GCLOUD_PROJECT ?? 'the-vault-dev';
+const PROJECT_ID = process.env.GCLOUD_PROJECT ?? 'the-vault-f417a';
 const targetingEmulator = Boolean(process.env.FIRESTORE_EMULATOR_HOST);
 
 console.log(

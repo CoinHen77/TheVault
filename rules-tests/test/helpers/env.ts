@@ -22,7 +22,7 @@ export async function makeTestEnv(): Promise<RulesTestEnvironment> {
   }
 
   return initializeTestEnvironment({
-    projectId: process.env.GCLOUD_PROJECT ?? 'the-vault-dev',
+    projectId: process.env.GCLOUD_PROJECT ?? 'the-vault-f417a',
     firestore: {
       rules: fs.readFileSync(RULES_PATH, 'utf8'),
     },

@@ -7,7 +7,7 @@
 import { getApps, initializeApp } from 'firebase-admin/app';
 import { getFirestore, type Firestore } from 'firebase-admin/firestore';
 
-const PROJECT_ID = process.env.GCLOUD_PROJECT ?? 'the-vault-dev';
+const PROJECT_ID = process.env.GCLOUD_PROJECT ?? 'the-vault-f417a';
 
 if (!process.env.FIRESTORE_EMULATOR_HOST) {
   throw new Error(

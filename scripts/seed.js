@@ -23,7 +23,7 @@ import { getAuth } from 'firebase-admin/auth';
 import { getFirestore, Timestamp } from 'firebase-admin/firestore';
 import { sharesForBuyIn } from '@vault/shared';
 
-const PROJECT_ID = process.env.GCLOUD_PROJECT ?? 'the-vault-dev';
+const PROJECT_ID = process.env.GCLOUD_PROJECT ?? 'the-vault-f417a';
 
 if (!process.env.FIRESTORE_EMULATOR_HOST || !process.env.FIREBASE_AUTH_EMULATOR_HOST) {
   console.error('Refusing to seed: emulator host env vars are not set.');
