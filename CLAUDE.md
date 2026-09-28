@@ -108,7 +108,7 @@ CLAUDE.md
   - `decideNextBookholder` (SPEC.md §1.4, including the win → push → keep rules and the tiebreak chain units → weeks → coin flip, with the coin flip random source injectable for tests)
 - **Done when:** Vitest covers every case in SPEC.md §9.1 and §9.2, and all tests pass.
 
-### [ ] 3. Cloud Functions
+### [x] 3. Cloud Functions
 - Implement every function in SPEC.md §5, including `adminSubmitPick` and `lockDueWeeks`, using `/shared`.
 - Enforce auth and role checks: Admin via custom claim, Bookholder via the week doc.
 - Every money change writes a ledger entry.

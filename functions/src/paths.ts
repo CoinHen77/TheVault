@@ -1,0 +1,58 @@
+/**
+ * Firestore document/collection references for SPEC.md §3, parameterized by
+ * an injected `Firestore` instance so logic modules stay testable against
+ * either the production app or an emulator-backed instance in tests.
+ */
+import type { Firestore } from 'firebase-admin/firestore';
+
+export function playerDoc(db: Firestore, uid: string) {
+  return db.collection('players').doc(uid);
+}
+
+export function seasonDoc(db: Firestore, seasonId: string) {
+  return db.collection('seasons').doc(seasonId);
+}
+
+export function weeksCol(db: Firestore, seasonId: string) {
+  return seasonDoc(db, seasonId).collection('weeks');
+}
+
+export function weekDoc(db: Firestore, seasonId: string, weekId: string) {
+  return weeksCol(db, seasonId).doc(weekId);
+}
+
+export function buyInsCol(db: Firestore, seasonId: string, weekId: string) {
+  return weekDoc(db, seasonId, weekId).collection('buyIns');
+}
+
+export function buyInDoc(db: Firestore, seasonId: string, weekId: string, uid: string) {
+  return buyInsCol(db, seasonId, weekId).doc(uid);
+}
+
+export function picksCol(db: Firestore, seasonId: string, weekId: string) {
+  return weekDoc(db, seasonId, weekId).collection('picks');
+}
+
+export function pickDoc(db: Firestore, seasonId: string, weekId: string, uid: string) {
+  return picksCol(db, seasonId, weekId).doc(uid);
+}
+
+export function bookBetsCol(db: Firestore, seasonId: string, weekId: string) {
+  return weekDoc(db, seasonId, weekId).collection('bookBets');
+}
+
+export function bookBetDoc(db: Firestore, seasonId: string, weekId: string, betId: string) {
+  return bookBetsCol(db, seasonId, weekId).doc(betId);
+}
+
+export function ledgerCol(db: Firestore, seasonId: string) {
+  return seasonDoc(db, seasonId).collection('ledger');
+}
+
+export function standingsCol(db: Firestore, seasonId: string) {
+  return seasonDoc(db, seasonId).collection('standings');
+}
+
+export function standingDoc(db: Firestore, seasonId: string, uid: string) {
+  return standingsCol(db, seasonId).doc(uid);
+}

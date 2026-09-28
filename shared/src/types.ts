@@ -107,6 +107,8 @@ export interface Pick {
   updatedAt: TimestampLike;
   result: PickResult;
   units: number | null;
+  /** Set when the Admin enters this pick on the player's behalf (SPEC.md §5 adminSubmitPick). */
+  enteredBy?: string;
 }
 
 /** seasons/{seasonId}/weeks/{weekId}/bookBets/{betId} */
