@@ -96,7 +96,7 @@ CLAUDE.md
 - Add npm scripts: `dev`, `emulators`, `test`, `test:rules`, `seed`.
 - **Done when:** `npm run emulators` starts cleanly and the web app loads a placeholder page connected to the emulators.
 
-### [ ] 2. Core logic in `/shared`
+### [x] 2. Core logic in `/shared`
 - Build the types for every Firestore doc in SPEC.md §3.
 - Implement these functions:
   - `americanToDecimal`
