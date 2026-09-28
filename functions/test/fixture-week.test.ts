@@ -160,6 +160,7 @@ describe('§9.1 reference week, run through the Cloud Functions', () => {
       lockAt: Timestamp.fromMillis(Date.now() + 7 * 24 * 60 * 60 * 1000),
       status: 'open',
       bookholderId: 'P2',
+      submittedPlayerIds: [],
       sharePriceAtOpen: 0.75,
       openingVaultCents: 0,
       bookCapCents: 0,

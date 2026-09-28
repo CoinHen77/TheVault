@@ -138,6 +138,7 @@ export async function unmarkBuyInLogic(db: Firestore, params: UnmarkBuyInParams)
     });
     tx.delete(buyInRef);
     tx.delete(pickRef);
+    tx.update(weekRef, { submittedPlayerIds: FieldValue.arrayRemove(playerId) });
 
     tx.set(ledgerCol(db, seasonId).doc(), {
       type: 'buy_in',

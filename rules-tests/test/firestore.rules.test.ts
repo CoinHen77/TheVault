@@ -66,6 +66,7 @@ describe('firestore.rules', () => {
         lockAt: now,
         status: 'open',
         bookholderId: 'P1',
+        submittedPlayerIds: ['P1', 'P2'],
         sharePriceAtOpen: 1,
         openingVaultCents: 0,
         bookCapCents: 0,

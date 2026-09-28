@@ -86,6 +86,14 @@ export interface Week {
   lockAt: TimestampLike;
   status: WeekStatus;
   bookholderId: string;
+  /**
+   * uids who have submitted a pick this week, with no pick content — lets the
+   * Week Card show a submitted/not-submitted roster before lock, when the
+   * `picks` subcollection itself is unreadable to non-admins (SPEC.md §7
+   * screen 3 vs. §6 pick visibility). Maintained by submitPick,
+   * adminSubmitPick and unmarkBuyIn.
+   */
+  submittedPlayerIds: string[];
   sharePriceAtOpen: number;
   openingVaultCents: number;
   bookCapCents: number;

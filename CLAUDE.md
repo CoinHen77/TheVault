@@ -126,7 +126,7 @@ CLAUDE.md
   - Clients cannot write any protected field.
   - Non-invited users are rejected.
 
-### [ ] 5. Frontend — player screens
+### [x] 5. Frontend — player screens
 - Sign-in.
 - **Dashboard:** Vault, share price, my shares and their value, current week status, lock countdown, Bookholder, my buy-in and my pick.
 - **Submit Pick:** implied units shown live; the form is disabled with a reason when you're unpaid or the week is locked.

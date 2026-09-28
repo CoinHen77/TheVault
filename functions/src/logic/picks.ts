@@ -1,4 +1,4 @@
-import { Timestamp, type Firestore } from 'firebase-admin/firestore';
+import { FieldValue, Timestamp, type Firestore } from 'firebase-admin/firestore';
 import { HttpsError } from 'firebase-functions/v2/https';
 import {
   isValidAmericanOdds,
@@ -63,7 +63,10 @@ export async function submitPickLogic(db: Firestore, params: SubmitPickParams): 
     result: 'pending',
     units: null,
   };
-  await pickRef.set(pick);
+  const batch = db.batch();
+  batch.set(pickRef, pick);
+  batch.update(weekRef, { submittedPlayerIds: FieldValue.arrayUnion(uid) });
+  await batch.commit();
 }
 
 export interface AdminSubmitPickParams {
@@ -111,7 +114,10 @@ export async function adminSubmitPickLogic(db: Firestore, params: AdminSubmitPic
     units: null,
     enteredBy,
   };
-  await pickRef.set(pick);
+  const batch = db.batch();
+  batch.set(pickRef, pick);
+  batch.update(weekRef, { submittedPlayerIds: FieldValue.arrayUnion(playerId) });
+  await batch.commit();
 }
 
 export interface GradePickParams {

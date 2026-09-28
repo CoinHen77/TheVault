@@ -44,6 +44,7 @@ export function weekDocData(input: WeekDocInput): Omit<Week, 'closedAt'> {
     lockAt: Timestamp.fromMillis(input.lockAtMs),
     status: 'open',
     bookholderId: input.bookholderId,
+    submittedPlayerIds: [],
     sharePriceAtOpen: input.sharePriceAtOpen,
     openingVaultCents: 0,
     bookCapCents: 0,
