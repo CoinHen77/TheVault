@@ -1,10 +1,12 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+import type { Week } from '@vault/shared';
 import { placeBookBetLogic } from '../src/logic/bookBets.js';
 import { submitPickLogic } from '../src/logic/picks.js';
-import { createSeasonLogic } from '../src/logic/season.js';
+import { createSeasonLogic, updateWeekLogic } from '../src/logic/season.js';
 import { closeWeekLogic, startGradingLogic } from '../src/logic/weekLifecycle.js';
 import { markBuyInPaidLogic } from '../src/logic/buyIns.js';
 import { lockDueWeeksLogic } from '../src/logic/lock.js';
+import { weekDoc } from '../src/paths.js';
 import { clearFirestore, db } from './helpers/emulator.js';
 import { seedPlayers } from './helpers/seed.js';
 
@@ -81,6 +83,24 @@ describe('§9.3 guards', () => {
         ticketOdds: -110,
       }),
     ).rejects.toMatchObject({ code: 'invalid-argument' });
+  });
+
+  it('updateWeek edits an open week and rejects edits once it is locked', async () => {
+    const lockAtMs = Date.now() + 5_000;
+    await createSeasonLogic(db, { seasonId: SEASON_ID, name: 'Guards', adminUid: 'P1', week4LockAtMs: lockAtMs });
+
+    const newLockAtMs = lockAtMs + 60_000;
+    await updateWeekLogic(db, { seasonId: SEASON_ID, weekId: 'W04', buyInCents: 1500, lockAtMs: newLockAtMs });
+
+    const edited = (await weekDoc(db, SEASON_ID, 'W04').get()).data() as Week;
+    expect(edited.buyInCents).toBe(1500);
+    expect(edited.lockAt.toMillis()).toBe(newLockAtMs);
+
+    await lockDueWeeksLogic(db, { nowMs: newLockAtMs + 1 });
+
+    await expect(
+      updateWeekLogic(db, { seasonId: SEASON_ID, weekId: 'W04', buyInCents: 2000 }),
+    ).rejects.toMatchObject({ code: 'failed-precondition' });
   });
 
   it('rejects closeWeek with any pending result', async () => {

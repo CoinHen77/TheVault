@@ -1,6 +1,6 @@
-export type Tab = 'dashboard' | 'pick' | 'week' | 'standings' | 'book';
+export type Tab = 'dashboard' | 'pick' | 'week' | 'standings' | 'book' | 'admin';
 
-const TABS: { id: Tab; label: string }[] = [
+const BASE_TABS: { id: Tab; label: string }[] = [
   { id: 'dashboard', label: 'Home' },
   { id: 'pick', label: 'Pick' },
   { id: 'week', label: 'Week' },
@@ -8,11 +8,22 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'book', label: 'Book' },
 ];
 
-export default function Nav({ active, onChange }: { active: Tab; onChange: (tab: Tab) => void }) {
+const ADMIN_TAB: { id: Tab; label: string } = { id: 'admin', label: 'Admin' };
+
+export default function Nav({
+  active,
+  onChange,
+  showAdmin,
+}: {
+  active: Tab;
+  onChange: (tab: Tab) => void;
+  showAdmin: boolean;
+}) {
+  const tabs = showAdmin ? [...BASE_TABS, ADMIN_TAB] : BASE_TABS;
   return (
     <nav className="sticky bottom-0 border-t border-vault-green-700/40 bg-vault-black/95 backdrop-blur">
-      <div className="mx-auto grid max-w-md grid-cols-5">
-        {TABS.map((tab) => (
+      <div className={`mx-auto grid max-w-md ${tabs.length === 6 ? 'grid-cols-6' : 'grid-cols-5'}`}>
+        {tabs.map((tab) => (
           <button
             key={tab.id}
             type="button"

@@ -1,4 +1,4 @@
-import type { BookBet, BuyIn, Pick, Standing } from '@vault/shared';
+import type { BookBet, BuyIn, Pick, Standing, Week } from '@vault/shared';
 import { useCollectionData } from './useCollectionData';
 import { useDocData } from './useDocData';
 
@@ -16,6 +16,14 @@ export function useMyPick(seasonId: string | null, weekId: string | null, uid: s
 export function useBuyIns(seasonId: string | null, weekId: string | null) {
   const path = seasonId && weekId ? `seasons/${seasonId}/weeks/${weekId}/buyIns` : null;
   return useCollectionData<BuyIn>(path);
+}
+
+/** All weeks in the season, oldest first — used by the Admin screen's week picker. */
+export function useWeeks(seasonId: string | null) {
+  const path = seasonId ? `seasons/${seasonId}/weeks` : null;
+  const { data, loading } = useCollectionData<Week>(path);
+  const sorted = data ? [...data].sort((a, b) => a.order - b.order) : null;
+  return { data: sorted, loading };
 }
 
 export function useStandings(seasonId: string | null) {

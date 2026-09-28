@@ -149,6 +149,42 @@ export async function createWeekLogic(db: Firestore, params: CreateWeekParams): 
   return { weekId: params.weekId };
 }
 
+export interface UpdateWeekParams {
+  seasonId: string;
+  weekId: string;
+  nflWeek?: number | null;
+  type?: WeekType;
+  buyInCents?: number;
+  lockAtMs?: number;
+}
+
+/**
+ * Admin edit of a week's pre-lock fields (SPEC.md §7 screen 8 "create or edit
+ * weeks"; §4 notes closeWeek's auto-created next week is "editable"). Only
+ * while the week is still `open` — once locked, `openingVaultCents` and
+ * `bookCapCents` are already snapshotted from `buyInCents`, so changing it
+ * afterward would desync them.
+ */
+export async function updateWeekLogic(db: Firestore, params: UpdateWeekParams): Promise<void> {
+  const { seasonId, weekId, nflWeek, type, buyInCents, lockAtMs } = params;
+  const ref = weekDoc(db, seasonId, weekId);
+  const snap = await ref.get();
+  if (!snap.exists) throw new HttpsError('not-found', `Week ${weekId} not found.`);
+  const week = snap.data() as Week;
+  if (week.status !== 'open') {
+    throw new HttpsError('failed-precondition', `Week ${weekId} is ${week.status}, not open.`);
+  }
+
+  const update: Record<string, unknown> = {};
+  if (nflWeek !== undefined) update.nflWeek = nflWeek;
+  if (type !== undefined) update.type = type;
+  if (buyInCents !== undefined) update.buyInCents = buyInCents;
+  if (lockAtMs !== undefined) update.lockAt = Timestamp.fromMillis(lockAtMs);
+  if (Object.keys(update).length === 0) return;
+
+  await ref.update(update);
+}
+
 /**
  * Default type/buy-in/lockAt for the week closeWeek auto-creates (SPEC.md §4,
  * §5 closeWeek step 8). Regular season increments nflWeek through 18, then

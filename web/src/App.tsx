@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { AuthProvider, useAuth } from './auth/AuthProvider';
 import Nav, { type Tab } from './components/Nav';
 import { VaultDataProvider } from './hooks/VaultDataProvider';
+import Admin from './screens/Admin';
 import Book from './screens/Book';
 import Dashboard from './screens/Dashboard';
 import SignIn from './screens/SignIn';
@@ -40,7 +41,7 @@ function Gate() {
 }
 
 function AppShell() {
-  const { player, signOut } = useAuth();
+  const { player, isAdmin, signOut } = useAuth();
   const [tab, setTab] = useState<Tab>('dashboard');
 
   return (
@@ -62,9 +63,10 @@ function AppShell() {
         {tab === 'week' && <WeekCard />}
         {tab === 'standings' && <Standings />}
         {tab === 'book' && <Book />}
+        {tab === 'admin' && isAdmin && <Admin />}
       </div>
 
-      <Nav active={tab} onChange={setTab} />
+      <Nav active={tab} onChange={setTab} showAdmin={isAdmin} />
     </div>
   );
 }

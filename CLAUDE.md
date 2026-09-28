@@ -136,7 +136,7 @@ CLAUDE.md
 - **Styling:** dark green/black with gold accents, mobile-first.
 - **Done when:** a seeded emulator week can be played through the UI as several fake users.
 
-### [ ] 6. Frontend — Admin screens
+### [x] 6. Frontend — Admin screens
 - Invite players.
 - Create a season (start week 4, Admin as Bookholder) and create or edit weeks.
 - Mark buy-ins paid or unpaid.

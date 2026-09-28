@@ -47,7 +47,7 @@ service cloud.firestore {
 
       match /weeks/{weekId} {
         allow read: if isSignedIn();
-        allow write: if false; // createWeek / lockDueWeeks / closeWeek / etc. only
+        allow write: if false; // createWeek / updateWeek / lockDueWeeks / closeWeek / etc. only
 
         match /buyIns/{uid} {
           allow read: if isSignedIn();

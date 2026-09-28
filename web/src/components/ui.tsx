@@ -1,6 +1,19 @@
 import type { PickResult, WeekStatus } from '@vault/shared';
 import type { ReactNode } from 'react';
 
+/** Shared input styling for the Admin screen's several forms (mirrors SubmitPick/Book's local const). */
+export const inputClass =
+  'rounded-lg border border-vault-green-700/60 bg-vault-black/40 px-3 py-3 text-sm text-vault-gold-soft outline-none placeholder:text-vault-gold-soft/30 focus:border-vault-gold/60 disabled:opacity-40';
+
+export function Field({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <label className="flex flex-col gap-1 text-xs font-medium uppercase tracking-wide text-vault-gold-soft/50">
+      {label}
+      {children}
+    </label>
+  );
+}
+
 export function Card({ title, children }: { title?: string; children: ReactNode }) {
   return (
     <section className="rounded-xl border border-vault-green-700/40 bg-vault-green-900/60 p-4">

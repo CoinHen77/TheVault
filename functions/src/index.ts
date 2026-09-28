@@ -25,7 +25,7 @@ import {
 } from './logic/bookBets.js';
 import { lockDueWeeksLogic } from './logic/lock.js';
 import { adminSubmitPickLogic, gradePickLogic, submitPickLogic } from './logic/picks.js';
-import { createSeasonLogic, createWeekLogic } from './logic/season.js';
+import { createSeasonLogic, createWeekLogic, updateWeekLogic } from './logic/season.js';
 import {
   closeWeekLogic,
   finalizeSeasonLogic,
@@ -59,6 +59,11 @@ export const createSeason = onCall((request) => {
 export const createWeek = onCall((request) => {
   requireAdmin(request);
   return createWeekLogic(db(), request.data);
+});
+
+export const updateWeek = onCall((request) => {
+  requireAdmin(request);
+  return updateWeekLogic(db(), request.data);
 });
 
 export const markBuyInPaid = onCall((request) => {
