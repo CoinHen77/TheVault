@@ -47,4 +47,17 @@ export const COPY = {
   // Sign-in
   signInTagline: "Crew only. Sign in to see this week's job.",
   inviteOnly: "Invite-only. If you're not on the list, the door stays shut.",
+
+  // Invite email
+  inviteEmailSubject: "You're in — The Vault",
+  inviteEmailHeading: "The crew wants you in.",
+  inviteEmailBody: "You've been invited to The Vault. Sign in with this email address to see this week's job.",
+  inviteEmailCta: 'Open The Vault',
+
+  // Comment board
+  commentsTitle: "Kade's Comment Section",
+  commentsSubtitle: 'Say your piece.',
+  commentsPlaceholder: 'Say something…',
+  commentsPost: 'Post',
+  commentsEmpty: 'Nobody has said anything yet.',
 } as const;

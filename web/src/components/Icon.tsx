@@ -14,6 +14,7 @@ const PATHS = {
   arrowRight: 'M5 12h14M13 6l6 6-6 6',
   key: 'M8 15a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM12 11h9M18 11v3M21 11v2',
   envelope: 'M3 6h18v12H3zM3 7l9 6 9-6',
+  message: 'M4 5h16v11H8l-4 4z',
 } as const;
 
 export type IconName = keyof typeof PATHS;

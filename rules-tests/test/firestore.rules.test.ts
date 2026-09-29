@@ -9,7 +9,7 @@
  * emulators instead.)
  */
 import { assertFails, assertSucceeds, type RulesTestEnvironment } from '@firebase/rules-unit-testing';
-import { doc, getDoc, setDoc, updateDoc, Timestamp } from 'firebase/firestore';
+import { addDoc, collection, deleteDoc, doc, getDoc, setDoc, updateDoc, Timestamp } from 'firebase/firestore';
 import { afterAll, beforeAll, beforeEach, describe, it } from 'vitest';
 import { makeTestEnv } from './helpers/env.js';
 
@@ -254,6 +254,107 @@ describe('firestore.rules', () => {
         setDoc(doc(admin.firestore(), 'invites/new@example.com'), { invitedBy: 'ADMIN', invitedAt: Timestamp.now() }),
       );
       await assertSucceeds(getDoc(doc(admin.firestore(), 'invites/new@example.com')));
+    });
+  });
+
+  describe("comments (Kade's Comment Section)", () => {
+    it('lets a signed-in player post as themselves', async () => {
+      const p1 = asPlayer('P1');
+      await assertSucceeds(
+        addDoc(collection(p1.firestore(), 'comments'), {
+          authorId: 'P1',
+          authorName: 'P1',
+          text: 'hello crew',
+          createdAt: Timestamp.now(),
+        }),
+      );
+    });
+
+    it('rejects posting as someone else', async () => {
+      const p1 = asPlayer('P1');
+      await assertFails(
+        addDoc(collection(p1.firestore(), 'comments'), {
+          authorId: 'P2',
+          authorName: 'P2',
+          text: 'hello crew',
+          createdAt: Timestamp.now(),
+        }),
+      );
+    });
+
+    it('rejects an empty or overlong comment', async () => {
+      const p1 = asPlayer('P1');
+      await assertFails(
+        addDoc(collection(p1.firestore(), 'comments'), {
+          authorId: 'P1',
+          authorName: 'P1',
+          text: '',
+          createdAt: Timestamp.now(),
+        }),
+      );
+      await assertFails(
+        addDoc(collection(p1.firestore(), 'comments'), {
+          authorId: 'P1',
+          authorName: 'P1',
+          text: 'x'.repeat(1001),
+          createdAt: Timestamp.now(),
+        }),
+      );
+    });
+
+    it('denies an unauthenticated user any access', async () => {
+      await assertFails(
+        addDoc(collection(anon().firestore(), 'comments'), {
+          authorId: 'P1',
+          authorName: 'P1',
+          text: 'hello crew',
+          createdAt: Timestamp.now(),
+        }),
+      );
+    });
+
+    it('lets the author delete their own comment, but not another player', async () => {
+      const p1 = asPlayer('P1');
+      const ref = await addDoc(collection(p1.firestore(), 'comments'), {
+        authorId: 'P1',
+        authorName: 'P1',
+        text: 'hello crew',
+        createdAt: Timestamp.now(),
+      });
+
+      const p2 = asPlayer('P2');
+      await assertFails(deleteDoc(doc(p2.firestore(), `comments/${ref.id}`)));
+      await assertSucceeds(deleteDoc(doc(p1.firestore(), `comments/${ref.id}`)));
+    });
+
+    it('lets an admin delete any comment', async () => {
+      const p1 = asPlayer('P1');
+      const ref = await addDoc(collection(p1.firestore(), 'comments'), {
+        authorId: 'P1',
+        authorName: 'P1',
+        text: 'hello crew',
+        createdAt: Timestamp.now(),
+      });
+
+      const admin = asAdmin();
+      await assertSucceeds(deleteDoc(doc(admin.firestore(), `comments/${ref.id}`)));
+    });
+  });
+
+  describe('mail (Trigger Email from Firestore extension queue)', () => {
+    it('lets an admin queue a message but not read it back', async () => {
+      const admin = asAdmin();
+      const ref = await assertSucceeds(
+        addDoc(collection(admin.firestore(), 'mail'), { to: ['new@example.com'], message: { subject: 'x', html: '<p>x</p>' } }),
+      );
+      await assertFails(getDoc(doc(admin.firestore(), `mail/${ref.id}`)));
+    });
+
+    it('denies a non-admin any access to mail', async () => {
+      const p1 = asPlayer('P1');
+      await assertFails(
+        addDoc(collection(p1.firestore(), 'mail'), { to: ['new@example.com'], message: { subject: 'x', html: '<p>x</p>' } }),
+      );
     });
   });
 });

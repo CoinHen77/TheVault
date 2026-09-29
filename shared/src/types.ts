@@ -179,6 +179,19 @@ export interface LedgerEntry {
   createdBy: string;
 }
 
+/**
+ * comments/{id} — "Kade's Comment Section": a simple group message board, not
+ * part of SPEC.md. Top-level (not season-scoped) so it persists across
+ * seasons. `authorName` is a denormalized snapshot, same pattern as
+ * Standing.displayName.
+ */
+export interface Comment {
+  authorId: string;
+  authorName: string;
+  text: string;
+  createdAt: TimestampLike;
+}
+
 /** seasons/{seasonId}/standings/{uid} */
 export interface Standing {
   playerId: string;

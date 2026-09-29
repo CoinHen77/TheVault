@@ -2,12 +2,13 @@ import { useState } from 'react';
 import { AuthProvider, useAuth } from './auth/AuthProvider';
 import LockOverlay from './components/heist/LockOverlay';
 import Icon from './components/Icon';
-import { ADMIN_TAB, BottomNav, RULES_TAB, SideNav, type NavItem, type Tab } from './components/Nav';
+import { ADMIN_TAB, BottomNav, COMMENTS_TAB, RULES_TAB, SideNav, type NavItem, type Tab } from './components/Nav';
 import { COPY } from './lib/copy';
 import { LockRevealProvider } from './hooks/LockReveal';
 import { VaultDataProvider } from './hooks/VaultDataProvider';
 import Admin from './screens/Admin';
 import Book from './screens/Book';
+import Comments from './screens/Comments';
 import Dashboard from './screens/Dashboard';
 import Rules from './screens/Rules';
 import SignIn from './screens/SignIn';
@@ -75,6 +76,7 @@ function AppShell() {
           </button>
           <div className="flex items-center">
             <HeaderIconButton item={RULES_TAB} active={tab === 'rules'} onClick={() => setTab('rules')} />
+            <HeaderIconButton item={COMMENTS_TAB} active={tab === 'comments'} onClick={() => setTab('comments')} />
             {isAdmin && <HeaderIconButton item={ADMIN_TAB} active={tab === 'admin'} onClick={() => setTab('admin')} />}
             <button
               type="button"
@@ -96,6 +98,7 @@ function AppShell() {
           {tab === 'standings' && <Standings />}
           {tab === 'book' && <Book />}
           {tab === 'rules' && <Rules />}
+          {tab === 'comments' && <Comments />}
           {tab === 'admin' && isAdmin && <Admin />}
         </main>
 
