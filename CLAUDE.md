@@ -220,7 +220,7 @@ Decisions already made:
 - **Rules:** "The Code", five steps.
 - **Done when:** a seeded emulator week can be played through the UI as several fake users.
 
-### [ ] H4. The lock moment
+### [x] H4. The lock moment
 - The door animates closed → opening → open, then the envelopes flip open to reveal the tickets.
 - It plays once per week per device: on the first visit after lock, or live if the app is open at lock. A localStorage "seen" flag tracks this.
 - With `prefers-reduced-motion`, skip the animation and show the open door.
@@ -243,6 +243,7 @@ Decisions already made:
 ### [ ] H7. QA & launch (deploy only when Zach asks)
 - Run all tests; they should pass unchanged.
 - Test manually on iPhone Safari and as an installed app, Android Chrome and as an installed app, iPad, and desktop Chrome and Safari.
+- On one phone with "Reduce motion" turned on, confirm the lock moment shows no animation (the in-app browser can't emulate this setting, so H4 couldn't test it).
 - Set long cache headers for images and fonts in `firebase.json`.
 - Deploy hosting only: `firebase deploy --only hosting`.
 

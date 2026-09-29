@@ -1,8 +1,10 @@
+import { useRef } from 'react';
 import { useAuth } from '../auth/AuthProvider';
 import Envelope from '../components/heist/Envelope';
 import PickTicket from '../components/heist/PickTicket';
 import Icon from '../components/Icon';
 import { EmptyState, WeekStatusPill } from '../components/ui';
+import { useLockReveal } from '../hooks/LockReveal';
 import { useVaultData } from '../hooks/VaultDataProvider';
 import { useBookBets, useBuyIns, usePicks } from '../hooks/useWeekData';
 import { COPY } from '../lib/copy';
@@ -24,6 +26,16 @@ export default function WeekCard() {
   const { data: buyIns } = useBuyIns(seasonId, weekId);
   const { data: allPicks } = usePicks(seasonId, weekId, revealed);
   const { data: bets } = useBookBets(seasonId, weekId, revealed);
+
+  // H4: the first time this device sees the revealed tickets, flip them open
+  // one after another (after the door overlay, if it's still playing).
+  const { playing, flipWeekId, consumeFlip } = useLockReveal();
+  // Cleared when the last ticket finishes flipping, so it runs once per week.
+  const flip = revealed && flipWeekId !== null && flipWeekId === weekId && Boolean(allPicks?.length);
+  // Fix the start delay when the flip begins, so it doesn't jump when the overlay ends.
+  const flipStartRef = useRef<number | null>(null);
+  if (!flip) flipStartRef.current = null;
+  else flipStartRef.current ??= playing ? 2800 : 150;
 
   if (!season || !week) {
     return <EmptyState>No active season yet.</EmptyState>;
@@ -120,8 +132,13 @@ export default function WeekCard() {
           {allPicks
             .slice()
             .sort((a, b) => byName(a.id, b.id))
-            .map((p) => (
-              <li key={p.id}>
+            .map((p, i) => (
+              <li
+                key={p.id}
+                className={flip ? 'animate-vault-flip' : undefined}
+                style={flip ? { animationDelay: `${(flipStartRef.current ?? 150) + i * 110}ms` } : undefined}
+                onAnimationEnd={flip && i === allPicks.length - 1 ? consumeFlip : undefined}
+              >
                 <PickTicket
                   pick={p}
                   week={week}

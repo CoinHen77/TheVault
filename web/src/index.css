@@ -26,6 +26,26 @@
   --font-display: 'Playfair Display', Georgia, serif;
   --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* H4 lock moment: tickets flip open like envelopes being turned over. */
+  --animate-vault-flip: vault-flip-in 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes vault-flip-in {
+  from {
+    opacity: 0;
+    transform: perspective(900px) rotateY(88deg);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-vault-flip {
+    animation: none;
+  }
 }
 
 html,

@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { AuthProvider, useAuth } from './auth/AuthProvider';
+import LockOverlay from './components/heist/LockOverlay';
 import Icon from './components/Icon';
 import { ADMIN_TAB, BottomNav, RULES_TAB, SideNav, type NavItem, type Tab } from './components/Nav';
 import { COPY } from './lib/copy';
+import { LockRevealProvider } from './hooks/LockReveal';
 import { VaultDataProvider } from './hooks/VaultDataProvider';
 import Admin from './screens/Admin';
 import Book from './screens/Book';
@@ -38,7 +40,9 @@ function Gate() {
 
   return (
     <VaultDataProvider>
-      <AppShell />
+      <LockRevealProvider>
+        <AppShell />
+      </LockRevealProvider>
     </VaultDataProvider>
   );
 }
@@ -97,6 +101,8 @@ function AppShell() {
 
         <BottomNav active={tab} onChange={setTab} />
       </div>
+
+      <LockOverlay />
     </div>
   );
 }
