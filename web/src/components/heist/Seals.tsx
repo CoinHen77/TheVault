@@ -1,9 +1,19 @@
 import type { PickResult } from '@vault/shared';
 
 /** Red wax seal with a "V" — marks a pick as sealed until lock. */
-export function WaxSeal({ size = 38, className = '' }: { size?: number; className?: string }) {
+export function WaxSeal({
+  size = 38,
+  className = '',
+  decorative = false,
+}: {
+  size?: number;
+  className?: string;
+  /** True when surrounding text already says "seal" (e.g. inside the Seal it button). */
+  decorative?: boolean;
+}) {
+  const a11y = decorative ? { 'aria-hidden': true } : { role: 'img', 'aria-label': 'Sealed' };
   return (
-    <svg viewBox="0 0 40 40" width={size} height={size} className={className} role="img" aria-label="Sealed">
+    <svg viewBox="0 0 40 40" width={size} height={size} className={className} {...a11y}>
       <path
         d="M20 3c3 0 4 2 6.5 2.5S32 5 33.5 7.5 35 12 36 14.5s1.5 4 1 6.5-2 3.5-2.5 6-1 4.5-3.5 6-4.5 1-7 2S20 37 20 37s-1.5-1-4-1.5-5-.5-7-2-2.5-4-3.5-6S3 24 3 21s1-4 1.5-6.5S5 9 7 7.5s4-1.5 6.5-2.5S17 3 20 3z"
         className="fill-vault-wax"

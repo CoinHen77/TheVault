@@ -204,7 +204,7 @@ Decisions already made:
   - Admin: grading beside buy-ins.
 - **Done when:** every screen works at 375, 768 and 1280px wide with no horizontal scroll.
 
-### [ ] H3. Player screens
+### [x] H3. Player screens
 - **Sign-in:** large closed door.
 - **Home**, in three states:
   - **Open:** the door inside the countdown ring, a sealed ticket, the envelope count and the key holder.

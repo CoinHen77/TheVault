@@ -6,6 +6,8 @@ import {
   signInWithPopup,
 } from 'firebase/auth';
 import { useEffect, useState } from 'react';
+import Door from '../components/heist/Door';
+import { COPY } from '../lib/copy';
 import { auth, usingEmulators } from '../lib/firebase';
 
 const EMAIL_STORAGE_KEY = 'vault:emailForSignIn';
@@ -137,7 +139,7 @@ export default function SignIn() {
       {error && <ErrorText message={error} />}
 
       <p className="text-center text-xs leading-relaxed text-vault-gold-soft/55">
-        Invite-only. If your email hasn't been invited, sign-in will be rejected.
+        {COPY.inviteOnly}
       </p>
     </Shell>
   );
@@ -146,11 +148,12 @@ export default function SignIn() {
 function Shell({ children }: { children: React.ReactNode }) {
   return (
     <main className="mx-auto flex min-h-full w-full max-w-sm flex-col justify-center gap-6 px-5 py-10">
-      <header className="text-center">
-        <h1 className="font-display text-4xl font-bold text-vault-gold">The Vault</h1>
-        <p className="mt-2 text-sm text-vault-gold-soft/70">Sign in to see this week's action.</p>
+      <header className="flex flex-col items-center text-center">
+        <Door state="closed" height={200} />
+        <h1 className="mt-5 font-display text-4xl font-bold text-vault-gold">{COPY.appName}</h1>
+        <p className="mt-2 text-sm text-vault-gold-soft/70">{COPY.signInTagline}</p>
       </header>
-      <div className="flex flex-col gap-4 rounded-2xl border border-vault-gold/25 bg-vault-green-900/50 p-5">
+      <div className="flex flex-col gap-4 rounded-2xl border border-vault-brass bg-vault-panel p-5">
         {children}
       </div>
     </main>
@@ -165,7 +168,7 @@ function EmailInput({ email, onChange }: { email: string; onChange: (v: string) 
       placeholder="you@example.com"
       value={email}
       onChange={(e) => onChange(e.target.value)}
-      className="rounded-lg border border-vault-green-700/60 bg-vault-black/40 px-3 py-3 text-sm text-vault-gold-soft outline-none placeholder:text-vault-gold-soft/40 focus:border-vault-gold/60"
+      className="rounded-lg border border-vault-green-700/60 bg-vault-black/40 px-3 py-3 text-base text-vault-gold-soft outline-none placeholder:text-vault-gold-soft/40 focus:border-vault-gold/60"
     />
   );
 }

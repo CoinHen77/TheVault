@@ -21,7 +21,7 @@ export default function Ticket({
   footer?: ReactNode;
   mark?: ReactNode;
   muted?: boolean;
-  notchClassName?: string;
+  notchClassName?: string | undefined;
 }) {
   const notchBorder = muted ? 'border-vault-line' : 'border-vault-brass';
   return (

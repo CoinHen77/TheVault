@@ -2,10 +2,16 @@ import { httpsCallable } from 'firebase/functions';
 import { useMemo, useState } from 'react';
 import { defaultBookPayoutCents, isValidAmericanOdds } from '@vault/shared';
 import { useAuth } from '../auth/AuthProvider';
-import { Card, EmptyState, ErrorBanner, ResultPill } from '../components/ui';
+import CapRing from '../components/heist/CapRing';
+import Door from '../components/heist/Door';
+import KeyBadge from '../components/heist/KeyBadge';
+import { ResultStamp } from '../components/heist/Seals';
+import Ticket, { TicketStat } from '../components/heist/Ticket';
+import { EmptyState, ErrorBanner } from '../components/ui';
 import { useVaultData } from '../hooks/VaultDataProvider';
 import { useBookBets, usePicks } from '../hooks/useWeekData';
 import { functions } from '../lib/firebase';
+import { COPY } from '../lib/copy';
 import { formatCents, formatOdds, weekLabel } from '../lib/format';
 
 const placeBookBet = httpsCallable<
@@ -35,27 +41,34 @@ export default function Book() {
   const capRemainingCents = week.bookCapCents - stakedCents;
   const isBookholder = user?.uid === week.bookholderId;
   const canPlaceBets = isBookholder && week.status === 'locked';
+  const holderName = isBookholder ? 'You' : (players[week.bookholderId]?.displayName ?? week.bookholderId);
+  const legName = (id: string) => {
+    const leg = picks?.find((p) => p.id === id);
+    return leg ? leg.pickText : (players[id]?.displayName ?? id);
+  };
 
   return (
-    <div className="flex flex-col gap-4">
-      <Card title={`The Book — ${weekLabel(week)}`}>
-        {week.status === 'open' ? (
-          <EmptyState>The Book opens once picks lock.</EmptyState>
-        ) : (
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-[11px] uppercase tracking-wide text-vault-gold-soft/50">Cap</p>
-              <p className="text-lg font-semibold text-vault-gold">{formatCents(week.bookCapCents)}</p>
-            </div>
-            <div>
-              <p className="text-[11px] uppercase tracking-wide text-vault-gold-soft/50">Remaining</p>
-              <p className={`text-lg font-semibold ${capRemainingCents >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                {formatCents(capRemainingCents)}
-              </p>
-            </div>
-          </div>
-        )}
-      </Card>
+    <div className="flex flex-col gap-5">
+      <header className="flex items-baseline justify-between gap-3">
+        <div>
+          <h1 className="font-display text-2xl font-bold text-vault-gold">{COPY.bookTitle}</h1>
+          <p className="text-sm text-vault-gold-soft/60">{weekLabel(week)}</p>
+        </div>
+        <KeyBadge name={holderName} />
+      </header>
+
+      {week.status === 'open' ? (
+        <div className="flex flex-col items-center gap-3 py-4 text-center">
+          <Door state="closed" height={140} />
+          <p className="text-sm text-vault-gold-soft/70">The Book opens once the door locks.</p>
+          <p className="text-xs text-vault-gold-soft/55">
+            Then the {COPY.bookholder} can stake up to {Math.round(season.bookCapPct * 100)}% of the opening Vault on
+            this week&apos;s picks.
+          </p>
+        </div>
+      ) : (
+        <CapRing usedCents={stakedCents} capCents={week.bookCapCents} />
+      )}
 
       {canPlaceBets && picks && (
         <BetBuilder
@@ -67,46 +80,47 @@ export default function Book() {
         />
       )}
 
-      <Card title="Placed bets">
-        {!bets ? (
-          <EmptyState>Bets aren't visible until the week locks.</EmptyState>
-        ) : bets.length === 0 ? (
-          <EmptyState>No bets placed yet.</EmptyState>
-        ) : (
-          <ul className="flex flex-col divide-y divide-vault-green-700/30">
-            {bets.map((bet) => (
-              <li key={bet.id} className="flex flex-col gap-1.5 py-3 text-sm">
-                <div className="flex items-center justify-between">
-                  <span className="text-vault-gold-soft/90">
-                    {bet.legPickIds.length === 1 ? 'Straight' : `${bet.legPickIds.length}-leg parlay`} ·{' '}
-                    {formatOdds(bet.ticketOdds)}
-                  </span>
-                  <ResultPill result={bet.result} />
-                </div>
-                <p className="text-xs text-vault-gold-soft/50">
-                  {bet.legPickIds
-                    .map((legId) => {
-                      const leg = picks?.find((p) => p.id === legId);
-                      const owner = players[legId]?.displayName ?? legId;
-                      return leg ? `${owner}: ${leg.pickText}` : owner;
-                    })
-                    .join(' + ')}
-                </p>
-                <p className="text-xs text-vault-gold-soft/70">
-                  Stake {formatCents(bet.stakeCents)}
-                  {bet.payoutCents !== null && ` · Payout ${formatCents(bet.payoutCents)}`}
-                  {bet.netCents !== null && (
-                    <span className={bet.netCents >= 0 ? ' text-emerald-400' : ' text-red-400'}>
-                      {' '}
-                      · Net {formatCents(bet.netCents)}
-                    </span>
-                  )}
-                </p>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Card>
+      {week.status !== 'open' && (
+        <section className="flex flex-col gap-3">
+          <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-vault-gold-soft/60">Placed</h2>
+          {!bets || bets.length === 0 ? (
+            <EmptyState>No bets placed yet.</EmptyState>
+          ) : (
+            <ul className="grid gap-3 md:grid-cols-2">
+              {bets.map((bet) => (
+                <li key={bet.id}>
+                  <Ticket
+                    eyebrow={bet.legPickIds.length === 1 ? 'Straight' : `${bet.legPickIds.length}-leg parlay`}
+                    title={<span className="font-mono">{formatOdds(bet.ticketOdds)}</span>}
+                    subtitle={bet.legPickIds.map(legName).join(' · ')}
+                    muted={bet.result === 'loss' || bet.result === 'push'}
+                    mark={<ResultStamp result={bet.result} />}
+                    footer={
+                      <div className="flex items-end justify-between gap-3">
+                        <TicketStat label="Stake" value={formatCents(bet.stakeCents)} />
+                        {bet.netCents !== null ? (
+                          <TicketStat
+                            label="Net"
+                            value={`${bet.netCents > 0 ? '+' : ''}${formatCents(bet.netCents)}`}
+                            tone={bet.netCents > 0 ? 'good' : bet.netCents < 0 ? 'bad' : 'default'}
+                            align="right"
+                          />
+                        ) : (
+                          <TicketStat
+                            label="Pays"
+                            value={bet.payoutCents !== null ? formatCents(bet.payoutCents) : '—'}
+                            align="right"
+                          />
+                        )}
+                      </div>
+                    }
+                  />
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
     </div>
   );
 }
@@ -182,61 +196,106 @@ function BetBuilder({
   }
 
   return (
-    <Card title="Place a bet">
+    <section className="flex flex-col gap-3 rounded-2xl border border-vault-gold/40 bg-vault-panel p-4">
+      <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-vault-gold-soft/60">Build a bet</h2>
       <form className="flex flex-col gap-3" onSubmit={(e) => void handleSubmit(e)}>
-        <p className="text-xs font-medium uppercase tracking-wide text-vault-gold-soft/50">Legs</p>
-        <ul className="flex flex-col gap-1.5">
-          {picks.map((p) => (
-            <li key={p.id}>
-              <label className="flex items-center gap-2 rounded-lg border border-vault-green-700/40 px-3 py-2 text-sm text-vault-gold-soft/90">
-                <input type="checkbox" checked={legIds.includes(p.id)} onChange={() => toggleLeg(p.id)} />
-                <span className="min-w-0 flex-1 truncate">
-                  {players[p.id]?.displayName ?? p.id}: {p.pickText} ({formatOdds(p.americanOdds)})
-                </span>
-              </label>
-            </li>
-          ))}
-        </ul>
+        <fieldset className="flex flex-col gap-2">
+          <legend className="mb-2 text-xs text-vault-gold-soft/60">Tap this week&apos;s picks to add them as legs.</legend>
+          <div className="flex flex-wrap gap-2">
+            {picks.map((p) => {
+              const on = legIds.includes(p.id);
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() => toggleLeg(p.id)}
+                  className={`min-h-11 rounded-full border px-3.5 text-sm transition ${
+                    on
+                      ? 'border-vault-gold bg-vault-gold/15 text-vault-gold'
+                      : 'border-vault-steel-700 text-vault-gold-soft/80 hover:border-vault-gold/50'
+                  }`}
+                >
+                  {p.pickText} <span className="font-mono text-xs opacity-70">{formatOdds(p.americanOdds)}</span>
+                  <span className="sr-only"> ({players[p.id]?.displayName ?? p.id})</span>
+                </button>
+              );
+            })}
+          </div>
+        </fieldset>
 
-        <label className="flex flex-col gap-1 text-xs font-medium uppercase tracking-wide text-vault-gold-soft/50">
-          Stake ($)
-          <input value={stakeInput} onChange={(e) => setStakeInput(e.target.value)} inputMode="decimal" placeholder="20.00" className={inputClass} />
-        </label>
+        <div className="grid grid-cols-2 gap-3">
+          <label className="flex flex-col gap-1 text-[11px] font-medium uppercase tracking-[0.12em] text-vault-gold-soft/60">
+            Stake ($)
+            <input
+              id="bet-stake"
+              value={stakeInput}
+              onChange={(e) => setStakeInput(e.target.value)}
+              inputMode="decimal"
+              placeholder="20.00"
+              className={inputClass}
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-[11px] font-medium uppercase tracking-[0.12em] text-vault-gold-soft/60">
+            Ticket odds
+            <input
+              id="bet-odds"
+              value={ticketOddsInput}
+              onChange={(e) => setTicketOddsInput(e.target.value)}
+              inputMode="numeric"
+              placeholder="+264"
+              className={inputClass}
+            />
+          </label>
+        </div>
 
-        <label className="flex flex-col gap-1 text-xs font-medium uppercase tracking-wide text-vault-gold-soft/50">
-          Ticket odds
-          <input value={ticketOddsInput} onChange={(e) => setTicketOddsInput(e.target.value)} inputMode="numeric" placeholder="+18054" className={inputClass} />
-        </label>
-
-        <label className="flex items-center gap-2 text-sm text-vault-gold-soft/70">
-          <input type="checkbox" checked={overridePayout} onChange={(e) => setOverridePayout(e.target.checked)} />
-          Override exact payout
+        <label className="flex min-h-11 items-center gap-2 text-sm text-vault-gold-soft/75">
+          <input
+            id="bet-override"
+            type="checkbox"
+            className="h-5 w-5 accent-vault-gold"
+            checked={overridePayout}
+            onChange={(e) => setOverridePayout(e.target.checked)}
+          />
+          Use the exact payout from the ticket
         </label>
         {overridePayout && (
-          <input value={payoutInput} onChange={(e) => setPayoutInput(e.target.value)} inputMode="decimal" placeholder="3630.82" className={inputClass} />
+          <input
+            id="bet-payout"
+            value={payoutInput}
+            onChange={(e) => setPayoutInput(e.target.value)}
+            inputMode="decimal"
+            placeholder="3630.82"
+            aria-label="Exact payout ($)"
+            className={inputClass}
+          />
         )}
 
-        {defaultPayoutCents !== null && (
-          <p className="text-xs text-vault-gold-soft/50">
-            Default payout on a win: <span className="text-vault-gold-soft">{formatCents(defaultPayoutCents)}</span>
+        {defaultPayoutCents !== null && !overridePayout && (
+          <p className="text-xs text-vault-gold-soft/60">
+            Pays <span className="font-mono text-vault-gold-soft">{formatCents(defaultPayoutCents)}</span> if it wins.
           </p>
         )}
-        {wouldExceedCap && <p className="text-xs text-red-400">Stake exceeds the cap remaining.</p>}
+        {wouldExceedCap && (
+          <p className="text-xs text-vault-loss">
+            That stake is more than the {formatCents(capRemainingCents)} left under the cap.
+          </p>
+        )}
 
         {error && <ErrorBanner message={error} />}
-        {success && <p className="text-sm text-emerald-400">Bet placed.</p>}
+        {success && <p className="text-sm text-vault-win">Bet placed.</p>}
 
         <button
           type="submit"
           disabled={!canSubmit}
-          className="mt-1 rounded-lg bg-vault-gold px-4 py-3 text-sm font-semibold text-vault-black transition hover:bg-vault-gold-soft disabled:opacity-40"
+          className="mt-1 min-h-11 rounded-lg bg-vault-gold px-4 text-sm font-semibold text-vault-black transition hover:bg-vault-gold-soft disabled:opacity-40"
         >
-          Place bet
+          {submitting ? 'Placing…' : `Place bet · ${formatCents(capRemainingCents)} left`}
         </button>
       </form>
-    </Card>
+    </section>
   );
 }
 
 const inputClass =
-  'rounded-lg border border-vault-green-700/60 bg-vault-black/40 px-3 py-3 text-sm text-vault-gold-soft outline-none placeholder:text-vault-gold-soft/30 focus:border-vault-gold/60';
+  'min-h-11 rounded-lg border border-vault-steel-700 bg-vault-black/40 px-3 py-2.5 font-mono text-base normal-case tracking-normal text-vault-gold-soft outline-none placeholder:text-vault-gold-soft/35 focus:border-vault-gold/60';
