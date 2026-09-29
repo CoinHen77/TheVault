@@ -92,7 +92,7 @@ export default function BookBetsGrading({
                       type="button"
                       disabled={busyId === bet.id}
                       onClick={() => void grade(bet.id, r)}
-                      className={`flex-1 rounded-md border px-2 py-1.5 text-xs font-medium capitalize transition disabled:opacity-40 ${
+                      className={`min-h-11 flex-1 rounded-md border px-2 py-1.5 text-xs font-medium capitalize transition disabled:opacity-40 ${
                         bet.result === r
                           ? 'border-vault-gold bg-vault-gold/10 text-vault-gold'
                           : 'border-vault-green-700/60 text-vault-gold-soft/70 hover:border-vault-gold/50'

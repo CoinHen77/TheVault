@@ -29,30 +29,32 @@ export default function Dashboard({ onNavigate }: { onNavigate: (tab: Tab) => vo
   const needsPick = canStillPick && Boolean(buyIn?.paid) && !pick;
 
   return (
-    <div className="flex flex-col gap-4">
-      <section className="flex flex-col items-center gap-1 py-4 text-center">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-vault-gold-soft/60">Vault balance</p>
-        <p className="font-mono text-4xl font-medium tracking-tight text-vault-gold">{formatCents(season.vaultCents)}</p>
-        <p className="text-xs text-vault-gold-soft/60">
-          Share price <span className="font-mono text-vault-gold-soft/90">{formatSharePrice(season.sharePrice)}</span>
-        </p>
-      </section>
+    <div className="grid gap-4 md:grid-cols-2 md:items-start md:gap-6">
+      <div className="flex flex-col gap-4">
+        <section className="flex flex-col items-center gap-1 py-4 text-center">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-vault-gold-soft/60">Vault balance</p>
+          <p className="font-mono text-4xl font-medium tracking-tight text-vault-gold">{formatCents(season.vaultCents)}</p>
+          <p className="text-xs text-vault-gold-soft/60">
+            Share price <span className="font-mono text-vault-gold-soft/90">{formatSharePrice(season.sharePrice)}</span>
+          </p>
+        </section>
 
-      <div className="grid grid-cols-2 gap-3">
-        <div className="rounded-2xl border border-vault-green-700/40 bg-vault-green-900/50 p-4">
-          <Stat label="Your value" value={formatCents(myValueCents)} />
+        <div className="grid grid-cols-2 gap-3">
+          <div className="rounded-2xl border border-vault-green-700/40 bg-vault-green-900/50 p-4">
+            <Stat label="Your value" value={formatCents(myValueCents)} />
+          </div>
+          <div className="rounded-2xl border border-vault-green-700/40 bg-vault-green-900/50 p-4">
+            <Stat label="Your shares" value={formatShares(myShares)} />
+          </div>
         </div>
-        <div className="rounded-2xl border border-vault-green-700/40 bg-vault-green-900/50 p-4">
-          <Stat label="Your shares" value={formatShares(myShares)} />
-        </div>
+
+        {season.requiredPreloadCents > 0 && (
+          <p className={`text-xs ${preloadMet ? 'text-vault-win' : 'text-amber-400'}`}>
+            Preload: {formatCents(myPreloadedCents)} of {formatCents(season.requiredPreloadCents)} required
+            {!preloadMet && ' — buy-ins are blocked until this is met'}
+          </p>
+        )}
       </div>
-
-      {season.requiredPreloadCents > 0 && (
-        <p className={`text-xs ${preloadMet ? 'text-vault-win' : 'text-amber-400'}`}>
-          Preload: {formatCents(myPreloadedCents)} of {formatCents(season.requiredPreloadCents)} required
-          {!preloadMet && ' — buy-ins are blocked until this is met'}
-        </p>
-      )}
 
       <Card accent={needsPick}>
         <div className="flex items-center justify-between gap-3">

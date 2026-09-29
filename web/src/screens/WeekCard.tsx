@@ -1,8 +1,9 @@
 import { useAuth } from '../auth/AuthProvider';
-import Icon from '../components/Icon';
+import Envelope from '../components/heist/Envelope';
 import { Avatar, Card, EmptyState, ResultPill, WeekStatusPill } from '../components/ui';
 import { useVaultData } from '../hooks/VaultDataProvider';
 import { useBuyIns, useMyPick, usePicks } from '../hooks/useWeekData';
+import { COPY } from '../lib/copy';
 import { formatOdds, weekLabel } from '../lib/format';
 
 export default function WeekCard() {
@@ -95,32 +96,26 @@ export default function WeekCard() {
           </ul>
         </Card>
       ) : (
-        <Card title="Who's submitted">
-          <ul className="flex flex-col divide-y divide-vault-green-700/30">
-            {paidPlayerIds
-              .slice()
-              .sort((a, b) => (players[a]?.displayName ?? a).localeCompare(players[b]?.displayName ?? b))
-              .map((uid) => (
-                <li key={uid} className="flex items-center justify-between py-2.5 text-sm">
-                  <span className="flex items-center gap-3 text-vault-gold-soft/90">
-                    <Avatar name={players[uid]?.displayName ?? uid} highlight={uid === week.bookholderId} />
-                    {players[uid]?.displayName ?? uid}
-                  </span>
-                  {submittedSet.has(uid) ? (
-                    <span className="flex items-center gap-1 text-xs font-medium text-vault-win">
-                      <Icon name="lock" className="h-3.5 w-3.5" />
-                      Sealed
-                    </span>
-                  ) : (
-                    <span className="flex items-center gap-1 text-xs text-vault-gold-soft/50">
-                      <Icon name="clock" className="h-3.5 w-3.5" />
-                      Waiting
-                    </span>
-                  )}
-                </li>
-              ))}
-            {paidPlayerIds.length === 0 && <EmptyState>No one has bought in yet.</EmptyState>}
-          </ul>
+        <Card title={COPY.envelopes}>
+          {paidPlayerIds.length === 0 ? (
+            <EmptyState>No one has bought in yet.</EmptyState>
+          ) : (
+            <ul className="grid grid-cols-3 gap-2 md:grid-cols-4">
+              {paidPlayerIds
+                .slice()
+                .sort((a, b) => (players[a]?.displayName ?? a).localeCompare(players[b]?.displayName ?? b))
+                .map((uid) => (
+                  <li key={uid}>
+                    <Envelope
+                      name={players[uid]?.displayName ?? uid}
+                      sealed={submittedSet.has(uid)}
+                      isYou={uid === user?.uid}
+                      isKeyHolder={uid === week.bookholderId}
+                    />
+                  </li>
+                ))}
+            </ul>
+          )}
           {myPick && (
             <p className="mt-4 border-t border-vault-green-700/30 pt-3 text-sm text-vault-gold-soft/70">
               Your pick: <span className="text-vault-gold-soft">{myPick.pickText}</span>{' '}

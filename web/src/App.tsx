@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { AuthProvider, useAuth } from './auth/AuthProvider';
-import Icon, { type IconName } from './components/Icon';
-import Nav, { type Tab } from './components/Nav';
+import Icon from './components/Icon';
+import { ADMIN_TAB, BottomNav, RULES_TAB, SideNav, type NavItem, type Tab } from './components/Nav';
+import { COPY } from './lib/copy';
 import { VaultDataProvider } from './hooks/VaultDataProvider';
 import Admin from './screens/Admin';
 import Book from './screens/Book';
@@ -26,7 +27,7 @@ function Gate() {
   if (status === 'loading') {
     return (
       <main className="flex min-h-full items-center justify-center">
-        <p className="font-display text-2xl text-vault-gold/70">The Vault</p>
+        <p className="font-display text-2xl text-vault-gold/70">{COPY.appName}</p>
       </main>
     );
   }
@@ -42,70 +43,77 @@ function Gate() {
   );
 }
 
+/** Home, Week and Admin use two columns from 768px; the rest read best as one column. */
+const WIDE_TABS: ReadonlySet<Tab> = new Set(['dashboard', 'week', 'admin']);
+
 function AppShell() {
   const { player, isAdmin, signOut } = useAuth();
   const [tab, setTab] = useState<Tab>('dashboard');
 
   return (
-    <div className="mx-auto flex min-h-full w-full max-w-md flex-col">
-      <header className="flex items-center justify-between gap-3 border-b border-vault-green-700/40 px-5 py-3">
-        <button type="button" onClick={() => setTab('dashboard')} className="font-display text-2xl font-bold text-vault-gold">
-          The Vault
-        </button>
-        <div className="flex items-center gap-1">
-          <HeaderIconButton icon="rules" label="Rules" active={tab === 'rules'} onClick={() => setTab('rules')} />
-          {isAdmin && (
-            <HeaderIconButton icon="gear" label="Admin" active={tab === 'admin'} onClick={() => setTab('admin')} />
-          )}
+    <div className="flex min-h-full w-full pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]">
+      <SideNav
+        active={tab}
+        onChange={setTab}
+        showAdmin={isAdmin}
+        playerName={player?.displayName ?? null}
+        onSignOut={() => void signOut()}
+      />
+
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-vault-line bg-vault-black/95 px-4 pb-2 pt-[max(0.5rem,env(safe-area-inset-top))] backdrop-blur md:hidden">
           <button
             type="button"
-            onClick={() => void signOut()}
-            title={player?.displayName ? `Signed in as ${player.displayName}` : undefined}
-            className="ml-1 rounded-lg px-2 py-1.5 text-xs text-vault-gold-soft/55 transition hover:text-vault-gold-soft/90"
+            onClick={() => setTab('dashboard')}
+            className="min-h-11 font-display text-2xl font-bold text-vault-gold"
           >
-            Sign out
+            {COPY.appName}
           </button>
-        </div>
-      </header>
+          <div className="flex items-center">
+            <HeaderIconButton item={RULES_TAB} active={tab === 'rules'} onClick={() => setTab('rules')} />
+            {isAdmin && <HeaderIconButton item={ADMIN_TAB} active={tab === 'admin'} onClick={() => setTab('admin')} />}
+            <button
+              type="button"
+              onClick={() => void signOut()}
+              title={player?.displayName ? `Signed in as ${player.displayName}` : undefined}
+              className="min-h-11 rounded-lg px-2 text-xs text-vault-gold-soft/55 transition hover:text-vault-gold-soft/90"
+            >
+              Sign out
+            </button>
+          </div>
+        </header>
 
-      <div className="flex-1 overflow-y-auto px-5 py-5">
-        {tab === 'dashboard' && <Dashboard onNavigate={setTab} />}
-        {tab === 'pick' && <SubmitPick />}
-        {tab === 'week' && <WeekCard />}
-        {tab === 'standings' && <Standings />}
-        {tab === 'book' && <Book />}
-        {tab === 'rules' && <Rules />}
-        {tab === 'admin' && isAdmin && <Admin />}
+        <main
+          className={`mx-auto w-full flex-1 px-4 py-5 md:px-8 md:py-8 ${WIDE_TABS.has(tab) ? 'max-w-5xl' : 'max-w-2xl'}`}
+        >
+          {tab === 'dashboard' && <Dashboard onNavigate={setTab} />}
+          {tab === 'pick' && <SubmitPick />}
+          {tab === 'week' && <WeekCard />}
+          {tab === 'standings' && <Standings />}
+          {tab === 'book' && <Book />}
+          {tab === 'rules' && <Rules />}
+          {tab === 'admin' && isAdmin && <Admin />}
+        </main>
+
+        <BottomNav active={tab} onChange={setTab} />
       </div>
-
-      <Nav active={tab} onChange={setTab} />
     </div>
   );
 }
 
-function HeaderIconButton({
-  icon,
-  label,
-  active,
-  onClick,
-}: {
-  icon: IconName;
-  label: string;
-  active: boolean;
-  onClick: () => void;
-}) {
+function HeaderIconButton({ item, active, onClick }: { item: NavItem; active: boolean; onClick: () => void }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      aria-label={label}
-      title={label}
+      aria-label={item.label}
+      title={item.label}
       aria-current={active ? 'page' : undefined}
-      className={`rounded-lg p-2 transition ${
+      className={`flex h-11 w-11 items-center justify-center rounded-lg transition ${
         active ? 'bg-vault-gold/10 text-vault-gold' : 'text-vault-gold-soft/55 hover:text-vault-gold-soft/90'
       }`}
     >
-      <Icon name={icon} />
+      <Icon name={item.icon} />
     </button>
   );
 }

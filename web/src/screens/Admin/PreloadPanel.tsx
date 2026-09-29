@@ -74,7 +74,7 @@ export default function PreloadPanel({
                   type="button"
                   disabled={busyUid === uid}
                   onClick={() => void toggle(uid, paid)}
-                  className="rounded-md border border-vault-green-700/60 px-2 py-1 text-xs text-vault-gold-soft/70 transition hover:border-vault-gold/60 disabled:opacity-40"
+                  className="min-h-11 rounded-md border border-vault-green-700/60 px-3 py-1 text-xs text-vault-gold-soft/70 transition hover:border-vault-gold/60 disabled:opacity-40"
                 >
                   {paid ? 'Unmark' : 'Mark paid'}
                 </button>

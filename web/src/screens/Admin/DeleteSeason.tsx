@@ -40,7 +40,7 @@ export default function DeleteSeason({ seasonId }: { seasonId: string }) {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="text-sm text-red-400 underline decoration-red-400/40 underline-offset-2"
+          className="min-h-11 text-sm text-red-400 underline decoration-red-400/40 underline-offset-2"
         >
           Delete this season…
         </button>

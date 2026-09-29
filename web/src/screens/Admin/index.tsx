@@ -64,12 +64,19 @@ export default function Admin() {
           {week && (
             <>
               <WeekEditor seasonId={season.id} week={week} />
-              <BuyInsPanel seasonId={season.id} week={week} players={players} />
-              <AdminPickEntry seasonId={season.id} week={week} players={players} picks={picks} />
-              <PicksGrading seasonId={season.id} week={week} players={players} picks={picks} />
-              <BookBetsGrading seasonId={season.id} week={week} bets={bets} picks={picks} players={players} />
-              <WeekLifecycleActions seasonId={season.id} week={week} picks={picks} bets={bets} players={players} />
-              <OverrideBookholder seasonId={season.id} week={week} players={players} />
+              {/* From 768px: buy-ins and pick entry on the left, grading and close on the right. */}
+              <div className="grid gap-4 md:grid-cols-2 md:items-start md:gap-6">
+                <div className="flex min-w-0 flex-col gap-4">
+                  <BuyInsPanel seasonId={season.id} week={week} players={players} />
+                  <AdminPickEntry seasonId={season.id} week={week} players={players} picks={picks} />
+                </div>
+                <div className="flex min-w-0 flex-col gap-4">
+                  <PicksGrading seasonId={season.id} week={week} players={players} picks={picks} />
+                  <BookBetsGrading seasonId={season.id} week={week} bets={bets} picks={picks} players={players} />
+                  <WeekLifecycleActions seasonId={season.id} week={week} picks={picks} bets={bets} players={players} />
+                  <OverrideBookholder seasonId={season.id} week={week} players={players} />
+                </div>
+              </div>
             </>
           )}
 

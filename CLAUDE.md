@@ -195,9 +195,9 @@ Decisions already made:
 - All Heist wording lives in `web/src/lib/copy.ts`.
 - **Done when:** a scratch page renders every component in each of its states, and typecheck passes.
 
-### [ ] H2. Responsive shell
+### [x] H2. Responsive shell
 - **Phones (<768px):** one column, the five-tab bottom bar (Home, Pick, Week, Sharp, Book), and Rules and Admin as header icons. Every tap target is at least 44px. Respect safe-area insets.
-- **≥768px:** the bottom bar becomes a left-hand menu that also lists Rules and Admin.
+- **≥768px:** the bottom bar becomes a left-hand menu that also lists Rules and Admin: an 80px icon strip on tablets (768–1023px) so two columns fit, and the full labelled menu from 1024px.
 - **Two-column layouts:**
   - Home: door and Vault on the left; ticket and week on the right.
   - Week: envelopes in 4 columns.

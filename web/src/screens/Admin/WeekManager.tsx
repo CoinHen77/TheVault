@@ -108,7 +108,7 @@ export function WeekEditor({ seasonId, week }: { seasonId: string; week: Week & 
           <button
             type="button"
             onClick={() => setEditing((v) => !v)}
-            className="text-xs text-vault-gold-soft/50 underline"
+            className="min-h-11 px-1 text-xs text-vault-gold-soft/50 underline"
           >
             {editing ? 'Cancel' : 'Edit'}
           </button>
@@ -257,7 +257,7 @@ export function CreateNextWeek({
         closeWeek normally creates the next week for you. Use this only to add or recover one manually.
       </p>
       {!open ? (
-        <button type="button" onClick={() => setOpen(true)} className="text-sm text-vault-gold underline">
+        <button type="button" onClick={() => setOpen(true)} className="min-h-11 text-sm text-vault-gold underline">
           + Create a week
         </button>
       ) : (
