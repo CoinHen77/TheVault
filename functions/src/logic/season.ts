@@ -97,6 +97,7 @@ export async function createSeasonLogic(
     sharePrice: 1.0,
     buyInDefaultsCents: resolvedBuyInDefaults,
     requiredPreloadCents,
+    removedPlayerIds: [],
   };
   await seasonRef.set(season);
 

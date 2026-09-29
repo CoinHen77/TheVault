@@ -15,18 +15,25 @@ const base = {
 } as const;
 
 describe('withSeasonDefaults', () => {
-  it('fills both fields on a season created before they existed', () => {
+  it('fills these fields on a season created before they existed', () => {
     const legacy = { ...base } as unknown as Season;
     const s = withSeasonDefaults(legacy);
     expect(s.buyInDefaultsCents).toEqual(DEFAULT_BUY_IN_CENTS);
     expect(s.requiredPreloadCents).toBe(0);
+    expect(s.removedPlayerIds).toEqual([]);
   });
 
   it('keeps values a season already has', () => {
     const custom = { regular: 2000, wildcard: 3000, divisional: 3000, conference: 6000, superbowl: 12000 };
-    const s = withSeasonDefaults({ ...base, buyInDefaultsCents: custom, requiredPreloadCents: 5000 } as Season);
+    const s = withSeasonDefaults({
+      ...base,
+      buyInDefaultsCents: custom,
+      requiredPreloadCents: 5000,
+      removedPlayerIds: ['P3'],
+    } as Season);
     expect(s.buyInDefaultsCents).toEqual(custom);
     expect(s.requiredPreloadCents).toBe(5000);
+    expect(s.removedPlayerIds).toEqual(['P3']);
   });
 
   it('fills week types missing from a partial buy-in table', () => {

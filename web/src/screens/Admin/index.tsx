@@ -13,6 +13,7 @@ import BuyInsPanel from './BuyInsPanel';
 import CreateSeason from './CreateSeason';
 import DeleteSeason from './DeleteSeason';
 import InvitePlayers from './InvitePlayers';
+import PlayersPanel from './PlayersPanel';
 import PreloadPanel from './PreloadPanel';
 import OverrideBookholder from './OverrideBookholder';
 import PicksGrading from './PicksGrading';
@@ -37,6 +38,15 @@ export default function Admin() {
 
   const weekPath = season && selectedWeekId ? `seasons/${season.id}/weeks/${selectedWeekId}` : null;
   const { data: week } = useDocData<Week>(weekPath);
+
+  // Excludes players removed from this season (CLAUDE.md H-later admin tool) from every
+  // buy-in/pick/preload/bookholder picker. WeekLifecycleActions/PicksGrading/BookBetsGrading
+  // keep the full `players` map below since they only look up names for existing picks/bets.
+  const removedIds = season?.removedPlayerIds ?? [];
+  const activePlayers =
+    removedIds.length === 0
+      ? players
+      : Object.fromEntries(Object.entries(players).filter(([uid]) => !removedIds.includes(uid)));
 
   // Admin always passes the picks rule (isAdmin() bypass, SPEC.md §6); bookBets has no such
   // bypass and the collection is empty anyway while `open`, so gate the same way Book.tsx does.
@@ -72,6 +82,9 @@ export default function Admin() {
           <ToolPanel title="Invite players" hint="Only invited emails can sign in">
             <InvitePlayers />
           </ToolPanel>
+          <ToolPanel title="Players" hint="Rename a player">
+            <PlayersPanel players={players} season={null} />
+          </ToolPanel>
         </>
       ) : (
         <>
@@ -82,8 +95,8 @@ export default function Admin() {
               {/* From 768px: buy-ins and pick entry on the left, grading on the right (once there's grading to do). */}
               <div className={`grid gap-4 md:items-start md:gap-6 ${week.status === 'open' ? '' : 'md:grid-cols-2'}`}>
                 <div className="flex min-w-0 flex-col gap-4">
-                  <BuyInsPanel seasonId={season.id} week={week} players={players} />
-                  <AdminPickEntry seasonId={season.id} week={week} players={players} picks={picks} />
+                  <BuyInsPanel seasonId={season.id} week={week} players={activePlayers} />
+                  <AdminPickEntry seasonId={season.id} week={week} players={activePlayers} picks={picks} />
                 </div>
                 <div className="flex min-w-0 flex-col gap-4">
                   <PicksGrading seasonId={season.id} week={week} players={players} picks={picks} />
@@ -100,8 +113,11 @@ export default function Admin() {
             <ToolPanel title="Invite players" hint="Only invited emails can sign in">
               <InvitePlayers />
             </ToolPanel>
+            <ToolPanel title="Players" hint="Rename a player, or remove one from this season">
+              <PlayersPanel players={players} season={season} />
+            </ToolPanel>
             <ToolPanel title="Preload" hint="One-time deposit before weekly buy-ins">
-              <PreloadPanel seasonId={season.id} requiredPreloadCents={season.requiredPreloadCents} players={players} />
+              <PreloadPanel seasonId={season.id} requiredPreloadCents={season.requiredPreloadCents} players={activePlayers} />
             </ToolPanel>
             {week && (
               <>
@@ -109,7 +125,7 @@ export default function Admin() {
                   <WeekEditor seasonId={season.id} week={week} />
                 </ToolPanel>
                 <ToolPanel title={`Override the ${COPY.bookholder}`} hint="Hand the key to someone else; it's logged">
-                  <OverrideBookholder seasonId={season.id} week={week} players={players} />
+                  <OverrideBookholder seasonId={season.id} week={week} players={activePlayers} />
                 </ToolPanel>
               </>
             )}
@@ -117,7 +133,7 @@ export default function Admin() {
               <CreateNextWeek
                 seasonId={season.id}
                 weeks={weeks}
-                players={players}
+                players={activePlayers}
                 buyInDefaults={season.buyInDefaultsCents}
               />
             </ToolPanel>

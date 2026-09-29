@@ -26,6 +26,11 @@ import {
 import { lockDueWeeksLogic } from './logic/lock.js';
 import { adminSubmitPickLogic, gradePickLogic, submitPickLogic } from './logic/picks.js';
 import { markPreloadPaidLogic, unmarkPreloadLogic } from './logic/preload.js';
+import {
+  removePlayerFromSeasonLogic,
+  restorePlayerToSeasonLogic,
+  updatePlayerNameLogic,
+} from './logic/players.js';
 import { createSeasonLogic, createWeekLogic, deleteSeasonLogic, updateWeekLogic } from './logic/season.js';
 import {
   closeWeekLogic,
@@ -91,6 +96,21 @@ export const unmarkPreload = onCall((request) => {
 export const deleteSeason = onCall((request) => {
   requireAdmin(request);
   return deleteSeasonLogic(db(), request.data.seasonId);
+});
+
+export const updatePlayerName = onCall((request) => {
+  requireAdmin(request);
+  return updatePlayerNameLogic(db(), request.data);
+});
+
+export const removePlayerFromSeason = onCall((request) => {
+  requireAdmin(request);
+  return removePlayerFromSeasonLogic(db(), request.data);
+});
+
+export const restorePlayerToSeason = onCall((request) => {
+  requireAdmin(request);
+  return restorePlayerToSeasonLogic(db(), request.data);
 });
 
 export const submitPick = onCall((request) => {

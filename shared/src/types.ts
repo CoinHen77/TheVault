@@ -80,6 +80,13 @@ export interface Season {
   buyInDefaultsCents: Record<WeekType, number>;
   /** Minimum cumulative preload a player needs before markBuyInPaid will accept a weekly buy-in for them. 0 = no gate. */
   requiredPreloadCents: number;
+  /**
+   * uids excluded from this season's buy-in/pick/preload pickers (e.g. invited
+   * by mistake, or sitting the season out). Reversible; only settable while
+   * the player has no shares/weeksBoughtIn/preloadedCents in this season, so
+   * it never needs to touch the Vault or standings.
+   */
+  removedPlayerIds: string[];
 }
 
 /** seasons/{seasonId}/weeks/{weekId} */
