@@ -120,7 +120,7 @@ export default function AdminPickEntry({
           />
         </Field>
         {error && <ErrorBanner message={error} />}
-        {success && <p className="text-sm text-emerald-400">Saved.</p>}
+        {success && <p className="text-sm text-vault-win">Saved.</p>}
         <button
           type="submit"
           disabled={!canSubmit}

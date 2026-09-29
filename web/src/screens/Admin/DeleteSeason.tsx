@@ -34,19 +34,18 @@ export default function DeleteSeason({ seasonId }: { seasonId: string }) {
   }
 
   return (
-    <section className="rounded-xl border border-red-500/30 bg-red-500/5 p-4">
-      <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest text-red-400">Danger zone</h2>
+    <div className="flex flex-col">
       {!open ? (
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="min-h-11 text-sm text-red-400 underline decoration-red-400/40 underline-offset-2"
+          className="min-h-11 self-start text-sm text-vault-loss underline decoration-vault-loss/40 underline-offset-2"
         >
           Delete this season…
         </button>
       ) : (
         <div className="flex flex-col gap-3">
-          <p className="text-sm text-red-400">
+          <p className="text-sm text-vault-loss">
             This permanently deletes <span className="font-semibold">{seasonId}</span> and everything in it — every
             week, buy-in, preload, pick, book bet, ledger entry, and the Sharp standings. There is no undo.
           </p>
@@ -57,7 +56,7 @@ export default function DeleteSeason({ seasonId }: { seasonId: string }) {
             value={confirmText}
             onChange={(e) => setConfirmText(e.target.value)}
             placeholder={seasonId}
-            className="rounded-lg border border-red-500/40 bg-vault-black/40 px-3 py-3 text-sm text-vault-gold-soft outline-none placeholder:text-vault-gold-soft/20 focus:border-red-400"
+            className="min-h-11 rounded-lg border border-vault-loss/50 bg-vault-black/40 px-3 py-2.5 text-base text-vault-gold-soft outline-none placeholder:text-vault-gold-soft/25 focus:border-vault-loss"
           />
           {error && <ErrorBanner message={error} />}
           <div className="flex gap-2">
@@ -65,7 +64,7 @@ export default function DeleteSeason({ seasonId }: { seasonId: string }) {
               type="button"
               disabled={!canDelete}
               onClick={() => void handleDelete()}
-              className="flex-1 rounded-lg bg-red-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-red-400 disabled:opacity-40"
+              className="min-h-11 flex-1 rounded-lg bg-red-600 px-4 text-sm font-semibold text-white transition hover:bg-red-500 disabled:opacity-40"
             >
               {deleting ? 'Deleting…' : `Permanently delete ${seasonId}`}
             </button>
@@ -76,13 +75,13 @@ export default function DeleteSeason({ seasonId }: { seasonId: string }) {
                 setConfirmText('');
                 setError(null);
               }}
-              className="rounded-lg border border-vault-green-700/60 px-4 py-3 text-sm text-vault-gold-soft/70"
+              className="min-h-11 rounded-lg border border-vault-steel-700 px-4 text-sm text-vault-gold-soft/70"
             >
               Cancel
             </button>
           </div>
         </div>
       )}
-    </section>
+    </div>
   );
 }

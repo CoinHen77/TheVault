@@ -226,7 +226,7 @@ Decisions already made:
 - With `prefers-reduced-motion`, skip the animation and show the open door.
 - **Done when:** it plays exactly once per week per device and never blocks using the app.
 
-### [ ] H5. Admin "Control room"
+### [x] H5. Admin "Control room"
 - Add a lifecycle stepper (Open → Locked → Grading → Closed) with the next action as the primary button.
 - One-tap W/L/P grading.
 - Move invites, the key override and seasons (create, delete, preload) into a secondary area.

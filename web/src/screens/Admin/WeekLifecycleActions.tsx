@@ -1,28 +1,28 @@
 import { httpsCallable } from 'firebase/functions';
 import { useState } from 'react';
-import type { BookBet, BookDecisionRule, BookDecisionTiebreak, Pick as PickDoc, Player, Week } from '@vault/shared';
-import { Card, ErrorBanner } from '../../components/ui';
+import type { BookBet, Pick as PickDoc, Player, Week, WeekStatus } from '@vault/shared';
+import Icon from '../../components/Icon';
+import { ErrorBanner } from '../../components/ui';
+import { COPY } from '../../lib/copy';
 import { functions } from '../../lib/firebase';
-import { formatCents, formatSharePrice } from '../../lib/format';
+import { formatCents, formatSharePrice, formatTimestampET, weekLabel } from '../../lib/format';
+import { keyDecisionReason } from '../../lib/keyDecision';
 
 const startGrading = httpsCallable<{ seasonId: string; weekId: string }, void>(functions, 'startGrading');
 const closeWeek = httpsCallable<{ seasonId: string; weekId: string }, unknown>(functions, 'closeWeek');
 
-const RULE_LABEL: Record<BookDecisionRule, string> = {
-  win: 'Longest-odds winning pick',
-  push: 'No wins — longest-odds push',
-  all_losses_keep: 'Everyone lost — Bookholder keeps the Book',
-  admin_override: 'Admin override',
-};
+const STEPS: { status: WeekStatus; label: string }[] = [
+  { status: 'open', label: 'Open' },
+  { status: 'locked', label: 'Locked' },
+  { status: 'grading', label: 'Grading' },
+  { status: 'closed', label: 'Closed' },
+];
 
-const TIEBREAK_LABEL: Record<BookDecisionTiebreak, string> = {
-  none: 'No tie',
-  units: 'Tiebreak: most season units',
-  weeks: 'Tiebreak: most weeks bought in',
-  coin_flip: 'Tiebreak: coin flip',
-};
-
-/** SPEC.md §5 startGrading/closeWeek and §1.4's Book decision, shown once the week closes. */
+/**
+ * The Control room's week progress bar (CLAUDE.md H5): Open → Locked →
+ * Grading → Closed, with the next action as the one primary button.
+ * SPEC.md §5 startGrading / closeWeek; §1.4's key decision once closed.
+ */
 export default function WeekLifecycleActions({
   seasonId,
   week,
@@ -39,86 +39,132 @@ export default function WeekLifecycleActions({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function handleStartGrading() {
+  const currentIndex = STEPS.findIndex((s) => s.status === week.status);
+  const toGrade = [...(picks ?? []), ...(bets ?? [])];
+  const gradedCount = toGrade.filter((x) => x.result !== 'pending').length;
+  const allGraded = week.status === 'grading' && gradedCount === toGrade.length;
+
+  async function run(action: typeof startGrading | typeof closeWeek) {
     setSubmitting(true);
     setError(null);
     try {
-      await startGrading({ seasonId, weekId: week.id });
+      await action({ seasonId, weekId: week.id });
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
       setSubmitting(false);
     }
-  }
-
-  const allGraded =
-    week.status === 'grading' &&
-    (picks ?? []).every((p) => p.result !== 'pending') &&
-    (bets ?? []).every((b) => b.result !== 'pending');
-
-  async function handleClose() {
-    setSubmitting(true);
-    setError(null);
-    try {
-      await closeWeek({ seasonId, weekId: week.id });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  if (week.status !== 'locked' && week.status !== 'grading' && week.status !== 'closed') {
-    return null;
   }
 
   return (
-    <Card title="Week lifecycle">
-      {error && <ErrorBanner message={error} />}
-      <div className="flex flex-col gap-3">
-        {week.status === 'locked' && (
-          <button
-            type="button"
-            disabled={submitting}
-            onClick={() => void handleStartGrading()}
-            className="rounded-lg bg-vault-gold px-4 py-3 text-sm font-semibold text-vault-black transition hover:bg-vault-gold-soft disabled:opacity-40"
-          >
-            Start grading
-          </button>
-        )}
-        {week.status === 'grading' && (
-          <button
-            type="button"
-            disabled={submitting || !allGraded}
-            onClick={() => void handleClose()}
-            className="rounded-lg bg-vault-gold px-4 py-3 text-sm font-semibold text-vault-black transition hover:bg-vault-gold-soft disabled:opacity-40"
-          >
-            {allGraded ? 'Close week' : 'Grade every pick and bet to close'}
-          </button>
-        )}
-        {week.status === 'closed' && (
-          <div className="rounded-lg border border-vault-green-700/40 bg-vault-black/30 p-3 text-sm">
-            <p className="mb-2 font-semibold text-vault-gold">Book decision</p>
-            <p className="text-vault-gold-soft/80">{RULE_LABEL[week.bookDecision.rule]}</p>
-            {week.bookDecision.tiebreakUsed !== 'none' && (
-              <p className="text-xs text-vault-gold-soft/50">{TIEBREAK_LABEL[week.bookDecision.tiebreakUsed]}</p>
-            )}
-            {week.bookDecision.coinFlipResult && (
-              <p className="text-xs text-vault-gold-soft/50">Coin flip result: {week.bookDecision.coinFlipResult}</p>
-            )}
-            <p className="mt-2 text-vault-gold-soft/80">
-              Next Bookholder:{' '}
-              <span className="font-medium text-vault-gold-soft">
-                {players[week.nextBookholderId]?.displayName ?? week.nextBookholderId}
+    <section className="flex flex-col gap-4 rounded-2xl border border-vault-brass bg-vault-panel p-4">
+      <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-vault-gold-soft/60">
+        {weekLabel(week)} progress
+      </h2>
+
+      <ol className="flex items-center" aria-label="Week progress">
+        {STEPS.map((step, i) => {
+          const done = i < currentIndex;
+          const current = i === currentIndex;
+          return (
+            <li key={step.status} className={`flex items-center ${i < STEPS.length - 1 ? 'flex-1' : ''}`}>
+              <span
+                aria-current={current ? 'step' : undefined}
+                className={`flex items-center gap-1.5 whitespace-nowrap text-xs sm:text-sm ${
+                  done ? 'text-vault-win' : current ? 'font-medium text-vault-gold' : 'text-vault-gold-soft/45'
+                }`}
+              >
+                <span
+                  className={`flex h-6 w-6 items-center justify-center rounded-full border ${
+                    done
+                      ? 'border-vault-win bg-vault-win/15'
+                      : current
+                        ? 'border-vault-gold bg-vault-gold/15'
+                        : 'border-vault-steel-700'
+                  }`}
+                  aria-hidden="true"
+                >
+                  {done ? <Icon name="check" className="h-3.5 w-3.5" /> : <span className="font-mono text-[11px]">{i + 1}</span>}
+                </span>
+                {step.label}
               </span>
+              {i < STEPS.length - 1 && (
+                <span
+                  aria-hidden="true"
+                  className={`mx-1.5 h-px flex-1 sm:mx-2.5 ${done ? 'bg-vault-win' : 'border-t border-dashed border-vault-steel-700'}`}
+                />
+              )}
+            </li>
+          );
+        })}
+      </ol>
+
+      {error && <ErrorBanner message={error} />}
+
+      {week.status === 'open' && (
+        <p className="text-sm text-vault-gold-soft/70">
+          The door locks by itself at <span className="text-vault-gold-soft">{formatTimestampET(week.lockAt)}</span>.
+          Mark buy-ins and enter any offline picks before then.
+        </p>
+      )}
+
+      {week.status === 'locked' && (
+        <>
+          <p className="text-sm text-vault-gold-soft/70">
+            Picks are locked and the {COPY.bookholder} can place bets. Start grading once the games are final; the Book
+            can&apos;t add bets after that.
+          </p>
+          <PrimaryButton disabled={submitting} onClick={() => void run(startGrading)}>
+            {submitting ? 'Starting…' : 'Start grading'}
+          </PrimaryButton>
+        </>
+      )}
+
+      {week.status === 'grading' && (
+        <>
+          <p className="text-sm text-vault-gold-soft/70">
+            <span className="font-mono text-vault-gold-soft">
+              {gradedCount} of {toGrade.length}
+            </span>{' '}
+            picks and bets graded.
+          </p>
+          <PrimaryButton disabled={submitting || !allGraded} onClick={() => void run(closeWeek)}>
+            {submitting ? 'Closing…' : allGraded ? 'Close week' : 'Grade everything to close'}
+          </PrimaryButton>
+        </>
+      )}
+
+      {week.status === 'closed' && (
+        <div className="flex flex-col gap-1.5 text-sm">
+          <p className="flex items-center gap-1.5 text-vault-gold">
+            <Icon name="key" className="h-4 w-4" />
+            {COPY.keyGoesTo} {players[week.nextBookholderId]?.displayName ?? week.nextBookholderId}
+          </p>
+          <p className="text-xs text-vault-gold-soft/65">{keyDecisionReason(week.bookDecision, players)}</p>
+          {week.bookDecision.coinFlipResult && (
+            <p className="text-xs text-vault-gold-soft/65">
+              Coin flip went to {players[week.bookDecision.coinFlipResult]?.displayName ?? week.bookDecision.coinFlipResult}.
             </p>
-            <p className="mt-2 text-xs text-vault-gold-soft/50">
-              Closing Vault {formatCents(week.closingVaultCents)} · Share price{' '}
-              {formatSharePrice(week.closingSharePrice)}
-            </p>
-          </div>
-        )}
-      </div>
-    </Card>
+          )}
+          <p className="text-xs text-vault-gold-soft/65">
+            Closing Vault <span className="font-mono">{formatCents(week.closingVaultCents)}</span> · Share price{' '}
+            <span className="font-mono">{formatSharePrice(week.closingSharePrice)}</span>
+          </p>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function PrimaryButton({ disabled, onClick, children }: { disabled: boolean; onClick: () => void; children: string }) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className="min-h-11 rounded-lg bg-vault-gold px-4 text-sm font-semibold text-vault-black transition hover:bg-vault-gold-soft disabled:opacity-40"
+    >
+      {children}
+    </button>
   );
 }

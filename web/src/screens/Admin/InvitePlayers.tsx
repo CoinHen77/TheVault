@@ -72,7 +72,7 @@ export default function InvitePlayers() {
         </button>
       </form>
 
-      <ul className="mt-4 flex flex-col divide-y divide-vault-green-700/30 border-t border-vault-green-700/30">
+      <ul className="mt-4 flex flex-col divide-y divide-vault-line border-t border-vault-line">
         {(invites ?? []).map((inv) => (
           <li key={inv.id} className="flex items-center justify-between py-2 text-sm">
             <span className="min-w-0 truncate text-vault-gold-soft/90">

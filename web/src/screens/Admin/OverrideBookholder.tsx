@@ -68,7 +68,7 @@ export default function OverrideBookholder({
           </select>
         </Field>
         {error && <ErrorBanner message={error} />}
-        {success && <p className="text-sm text-emerald-400">Bookholder updated.</p>}
+        {success && <p className="text-sm text-vault-win">Bookholder updated.</p>}
         <button
           type="submit"
           disabled={!canSubmit}

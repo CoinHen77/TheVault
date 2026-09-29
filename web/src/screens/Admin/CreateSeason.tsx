@@ -88,7 +88,7 @@ export default function CreateSeason() {
           />
         </Field>
 
-        <div className="mt-1 border-t border-vault-green-700/30 pt-3">
+        <div className="mt-1 border-t border-vault-line pt-3">
           <p className="mb-2 text-xs font-medium uppercase tracking-wide text-vault-gold-soft/50">
             Buy-in defaults by week type
           </p>
@@ -109,7 +109,7 @@ export default function CreateSeason() {
           </div>
         </div>
 
-        <div className="border-t border-vault-green-700/30 pt-3">
+        <div className="border-t border-vault-line pt-3">
           <Field label="Required preload per player ($)">
             <input
               value={requiredPreloadInput}

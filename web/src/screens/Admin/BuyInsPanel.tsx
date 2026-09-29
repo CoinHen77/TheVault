@@ -55,7 +55,7 @@ export default function BuyInsPanel({
   return (
     <Card title="Buy-ins">
       {error && <ErrorBanner message={error} />}
-      <ul className="flex flex-col divide-y divide-vault-green-700/30">
+      <ul className="flex flex-col divide-y divide-vault-line">
         {sortedPlayers(players).map(({ uid, player }) => {
           const buyIn = buyInByUid[uid];
           const paid = Boolean(buyIn?.paid);
@@ -63,7 +63,7 @@ export default function BuyInsPanel({
             <li key={uid} className="flex items-center justify-between gap-3 py-2.5 text-sm">
               <span className="min-w-0 truncate text-vault-gold-soft/90">{player.displayName}</span>
               <div className="flex shrink-0 items-center gap-2">
-                <span className={paid ? 'text-emerald-400' : 'text-vault-gold-soft/40'}>
+                <span className={paid ? 'text-vault-win' : 'text-vault-gold-soft/40'}>
                   {paid ? formatCents(buyIn!.amountCents) : 'Unpaid'}
                 </span>
                 {canEdit && (
@@ -71,7 +71,7 @@ export default function BuyInsPanel({
                     type="button"
                     disabled={busyUid === uid}
                     onClick={() => void toggle(uid, paid)}
-                    className="min-h-11 rounded-md border border-vault-green-700/60 px-3 py-1 text-xs text-vault-gold-soft/70 transition hover:border-vault-gold/60 disabled:opacity-40"
+                    className="min-h-11 rounded-md border border-vault-steel-700 px-3 py-1 text-xs text-vault-gold-soft/70 transition hover:border-vault-gold/60 disabled:opacity-40"
                   >
                     {paid ? 'Unmark' : 'Mark paid'}
                   </button>

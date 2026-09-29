@@ -45,15 +45,21 @@ export function WeekPicker({
   onChange: (weekId: string) => void;
 }) {
   return (
-    <Card title="Week">
-      <select value={selectedWeekId ?? ''} onChange={(e) => onChange(e.target.value)} className={inputClass}>
+    <Field label="Week">
+      <select
+        id="admin-week"
+        value={selectedWeekId ?? ''}
+        onChange={(e) => onChange(e.target.value)}
+        className={inputClass}
+      >
         {(weeks ?? []).map((w) => (
           <option key={w.id} value={w.id}>
-            {w.id} — {weekLabel(w)} ({w.status}){w.id === currentWeekId ? ' · current' : ''}
+            {weekLabel(w)} · {w.status}
+            {w.id === currentWeekId ? ' · current' : ''}
           </option>
         ))}
       </select>
-    </Card>
+    </Field>
   );
 }
 
@@ -253,8 +259,8 @@ export function CreateNextWeek({
 
   return (
     <Card title="Manually create a week">
-      <p className="mb-3 text-xs text-vault-gold-soft/40">
-        closeWeek normally creates the next week for you. Use this only to add or recover one manually.
+      <p className="mb-3 text-xs text-vault-gold-soft/60">
+        Closing a week normally creates the next one for you. Use this only to add or recover one by hand.
       </p>
       {!open ? (
         <button type="button" onClick={() => setOpen(true)} className="min-h-11 text-sm text-vault-gold underline">
@@ -322,7 +328,7 @@ export function CreateNextWeek({
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="rounded-lg border border-vault-green-700/60 px-4 py-3 text-sm text-vault-gold-soft/70"
+              className="rounded-lg border border-vault-steel-700 px-4 py-3 text-sm text-vault-gold-soft/70"
             >
               Cancel
             </button>

@@ -1,23 +1,30 @@
 import type { PickResult, WeekStatus } from '@vault/shared';
-import type { ReactNode } from 'react';
+import { createContext, use, type ReactNode } from 'react';
 
-/** Shared input styling for the Admin screen's several forms (mirrors SubmitPick/Book's local const). */
+/**
+ * Shared input styling for the Control room's forms (mirrors SubmitPick/Book's
+ * local const). 16px text so iOS Safari doesn't zoom in on focus.
+ */
 export const inputClass =
-  'rounded-lg border border-vault-green-700/60 bg-vault-black/40 px-3 py-3 text-sm text-vault-gold-soft outline-none placeholder:text-vault-gold-soft/30 focus:border-vault-gold/60 disabled:opacity-40';
+  'min-h-11 rounded-lg border border-vault-steel-700 bg-vault-black/40 px-3 py-2.5 text-base normal-case tracking-normal text-vault-gold-soft outline-none placeholder:text-vault-gold-soft/35 focus:border-vault-gold/60 disabled:opacity-40';
 
 export function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <label className="flex flex-col gap-1 text-xs font-medium uppercase tracking-wide text-vault-gold-soft/50">
+    <label className="flex flex-col gap-1 text-[11px] font-medium uppercase tracking-[0.12em] text-vault-gold-soft/60">
       {label}
       {children}
     </label>
   );
 }
 
+/** True inside a ToolPanel, which already draws the frame and title. */
+const PlainCardContext = createContext(false);
+
 export function Card({ title, children, accent = false }: { title?: string; children: ReactNode; accent?: boolean }) {
+  if (use(PlainCardContext)) return <div className="flex flex-col">{children}</div>;
   return (
     <section
-      className={`rounded-2xl border bg-vault-green-900/50 p-4 ${accent ? 'border-vault-gold/50' : 'border-vault-green-700/40'}`}
+      className={`rounded-2xl border bg-vault-panel p-4 ${accent ? 'border-vault-gold/50' : 'border-vault-line'}`}
     >
       {title && (
         <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-vault-gold-soft/60">{title}</h2>
@@ -107,5 +114,29 @@ export function Avatar({ name, highlight = false }: { name: string; highlight?: 
     >
       {initials || '?'}
     </span>
+  );
+}
+
+/**
+ * A collapsible Control room tool (CLAUDE.md H5): a native <details> so it's
+ * keyboard- and screen-reader-friendly with no extra state. Cards inside it
+ * render without their own frame and title.
+ */
+export function ToolPanel({ title, hint, children }: { title: string; hint?: string; children: ReactNode }) {
+  return (
+    <details className="group rounded-xl border border-vault-line bg-vault-panel">
+      <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-4 py-2 [&::-webkit-details-marker]:hidden">
+        <span className="flex flex-col">
+          <span className="text-sm font-medium text-vault-gold-soft">{title}</span>
+          {hint && <span className="text-xs text-vault-gold-soft/55">{hint}</span>}
+        </span>
+        <span aria-hidden="true" className="text-vault-gold-soft/55 transition group-open:rotate-90">
+          ›
+        </span>
+      </summary>
+      <div className="border-t border-vault-line px-4 py-4">
+        <PlainCardContext value={true}>{children}</PlainCardContext>
+      </div>
+    </details>
   );
 }
