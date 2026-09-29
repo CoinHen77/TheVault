@@ -178,7 +178,7 @@ Decisions already made:
 - Local dev must run against the emulators (`VITE_USE_EMULATORS=true`). `web/.env.local` currently points dev at production.
 - **Done when:** the working tree is clean and the redesign starts from a known commit.
 
-### [ ] H1. Foundation
+### [x] H1. Foundation
 - Add steel tones to the theme tokens, alongside the existing green, black and gold.
 - Fonts: Playfair Display (display), Inter (body), JetBrains Mono (all money, odds and units).
 - Door artwork goes in `web/public/vault/` as closed, opening and open WebP files at 1x and 2x. Preload the closed door.
