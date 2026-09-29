@@ -5,7 +5,7 @@ import { Card, ErrorBanner, Field, inputClass, WeekStatusPill } from '../../comp
 import { functions } from '../../lib/firebase';
 import { formatTimestampET, weekLabel } from '../../lib/format';
 import { sortedPlayers } from '../../lib/players';
-import { DEFAULT_BUY_IN_CENTS, suggestNextWeek, WEEK_TYPE_OPTIONS } from '../../lib/weekDefaults';
+import { suggestNextWeek, WEEK_TYPE_OPTIONS } from '../../lib/weekDefaults';
 
 const createWeek = httpsCallable<
   {
@@ -189,14 +189,16 @@ export function CreateNextWeek({
   seasonId,
   weeks,
   players,
+  buyInDefaults,
 }: {
   seasonId: string;
   weeks: (Week & { id: string })[] | null;
   players: Record<string, Player>;
+  buyInDefaults: Record<WeekType, number>;
 }) {
   const [open, setOpen] = useState(false);
   const latest = weeks && weeks.length > 0 ? weeks[weeks.length - 1]! : null;
-  const suggestion = latest ? suggestNextWeek(latest) : null;
+  const suggestion = latest ? suggestNextWeek(latest, buyInDefaults) : null;
 
   const [weekId, setWeekId] = useState('');
   const [nflWeekInput, setNflWeekInput] = useState('');
@@ -218,7 +220,7 @@ export function CreateNextWeek({
       setBuyInInput((suggestion.buyInCents / 100).toFixed(2));
       setLockAtInput(toDatetimeLocal(suggestion.lockAtMs));
     } else {
-      setBuyInInput((DEFAULT_BUY_IN_CENTS.regular / 100).toFixed(2));
+      setBuyInInput((buyInDefaults.regular / 100).toFixed(2));
     }
     setBookholderId(latest?.bookholderId ?? '');
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps

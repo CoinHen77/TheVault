@@ -25,7 +25,8 @@ import {
 } from './logic/bookBets.js';
 import { lockDueWeeksLogic } from './logic/lock.js';
 import { adminSubmitPickLogic, gradePickLogic, submitPickLogic } from './logic/picks.js';
-import { createSeasonLogic, createWeekLogic, updateWeekLogic } from './logic/season.js';
+import { markPreloadPaidLogic, unmarkPreloadLogic } from './logic/preload.js';
+import { createSeasonLogic, createWeekLogic, deleteSeasonLogic, updateWeekLogic } from './logic/season.js';
 import {
   closeWeekLogic,
   finalizeSeasonLogic,
@@ -74,6 +75,22 @@ export const markBuyInPaid = onCall((request) => {
 export const unmarkBuyIn = onCall((request) => {
   const unmarkedBy = requireAdmin(request);
   return unmarkBuyInLogic(db(), { ...request.data, unmarkedBy });
+});
+
+export const markPreloadPaid = onCall((request) => {
+  const markedBy = requireAdmin(request);
+  return markPreloadPaidLogic(db(), { ...request.data, markedBy });
+});
+
+export const unmarkPreload = onCall((request) => {
+  const unmarkedBy = requireAdmin(request);
+  return unmarkPreloadLogic(db(), { ...request.data, unmarkedBy });
+});
+
+/** Admin-only hard delete of a season and everything under it. Irreversible — the client gates this behind a type-to-confirm prompt. */
+export const deleteSeason = onCall((request) => {
+  requireAdmin(request);
+  return deleteSeasonLogic(db(), request.data.seasonId);
 });
 
 export const submitPick = onCall((request) => {

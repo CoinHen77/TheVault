@@ -104,7 +104,7 @@ export default function SignIn() {
         Continue with Google
       </button>
 
-      <div className="flex items-center gap-3 text-xs text-vault-gold-soft/40">
+      <div className="flex items-center gap-3 text-xs text-vault-gold-soft/55">
         <div className="h-px flex-1 bg-vault-green-700/40" />
         or
         <div className="h-px flex-1 bg-vault-green-700/40" />
@@ -136,7 +136,7 @@ export default function SignIn() {
 
       {error && <ErrorText message={error} />}
 
-      <p className="text-center text-xs leading-relaxed text-vault-gold-soft/40">
+      <p className="text-center text-xs leading-relaxed text-vault-gold-soft/55">
         Invite-only. If your email hasn't been invited, sign-in will be rejected.
       </p>
     </Shell>
@@ -147,10 +147,10 @@ function Shell({ children }: { children: React.ReactNode }) {
   return (
     <main className="mx-auto flex min-h-full w-full max-w-sm flex-col justify-center gap-6 px-5 py-10">
       <header className="text-center">
-        <h1 className="text-3xl font-semibold tracking-tight text-vault-gold">The Vault</h1>
-        <p className="mt-1 text-sm text-vault-gold-soft/60">Sign in to see this week's action.</p>
+        <h1 className="font-display text-4xl font-bold text-vault-gold">The Vault</h1>
+        <p className="mt-2 text-sm text-vault-gold-soft/70">Sign in to see this week's action.</p>
       </header>
-      <div className="flex flex-col gap-4 rounded-xl border border-vault-green-700/40 bg-vault-green-900/60 p-5">
+      <div className="flex flex-col gap-4 rounded-2xl border border-vault-gold/25 bg-vault-green-900/50 p-5">
         {children}
       </div>
     </main>
@@ -165,7 +165,7 @@ function EmailInput({ email, onChange }: { email: string; onChange: (v: string) 
       placeholder="you@example.com"
       value={email}
       onChange={(e) => onChange(e.target.value)}
-      className="rounded-lg border border-vault-green-700/60 bg-vault-black/40 px-3 py-3 text-sm text-vault-gold-soft outline-none placeholder:text-vault-gold-soft/30 focus:border-vault-gold/60"
+      className="rounded-lg border border-vault-green-700/60 bg-vault-black/40 px-3 py-3 text-sm text-vault-gold-soft outline-none placeholder:text-vault-gold-soft/40 focus:border-vault-gold/60"
     />
   );
 }
@@ -183,5 +183,5 @@ function PrimaryButton({ children, disabled }: { children: React.ReactNode; disa
 }
 
 function ErrorText({ message }: { message: string }) {
-  return <p className="text-sm text-red-400">{message}</p>;
+  return <p className="text-sm text-vault-loss">{message}</p>;
 }

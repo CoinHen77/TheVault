@@ -1,6 +1,6 @@
 @import 'tailwindcss';
 
-/* Dark green / black with gold accents (SPEC.md §7). Refined in Milestone 5. */
+/* Dark green / black with gold accents (SPEC.md §7). */
 @theme {
   --color-vault-black: #060907;
   --color-vault-green-900: #0a1f16;
@@ -8,6 +8,13 @@
   --color-vault-green-700: #14543b;
   --color-vault-gold: #d4af37;
   --color-vault-gold-soft: #f0d98c;
+  --color-vault-win: #6fcf8e;
+  --color-vault-loss: #e0735f;
+
+  /* Display serif for the brand, sans for UI, mono for every dollar/odds/units figure. */
+  --font-display: 'Playfair Display', Georgia, serif;
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 }
 
 html,
@@ -19,5 +26,11 @@ body,
 body {
   background-color: var(--color-vault-black);
   color: var(--color-vault-gold-soft);
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+}
+
+/* Fixed-width digits so balances and odds line up and don't jitter as they change. */
+.font-mono {
+  font-variant-numeric: tabular-nums;
 }

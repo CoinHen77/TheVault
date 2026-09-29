@@ -1,4 +1,4 @@
-import type { BookBet, BuyIn, Pick, Standing, Week } from '@vault/shared';
+import type { BookBet, BuyIn, Pick, Preload, Standing, Week } from '@vault/shared';
 import { useCollectionData } from './useCollectionData';
 import { useDocData } from './useDocData';
 
@@ -16,6 +16,12 @@ export function useMyPick(seasonId: string | null, weekId: string | null, uid: s
 export function useBuyIns(seasonId: string | null, weekId: string | null) {
   const path = seasonId && weekId ? `seasons/${seasonId}/weeks/${weekId}/buyIns` : null;
   return useCollectionData<BuyIn>(path);
+}
+
+/** Season-scoped preload records (not tied to a week), readable to any signed-in player at all times. */
+export function usePreloads(seasonId: string | null) {
+  const path = seasonId ? `seasons/${seasonId}/preloads` : null;
+  return useCollectionData<Preload>(path);
 }
 
 /** All weeks in the season, oldest first — used by the Admin screen's week picker. */

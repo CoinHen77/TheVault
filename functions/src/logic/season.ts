@@ -1,16 +1,7 @@
 import { Timestamp, type Firestore } from 'firebase-admin/firestore';
 import { HttpsError } from 'firebase-functions/v2/https';
-import type { BookDecision, Season, Week, WeekType } from '@vault/shared';
+import { DEFAULT_BUY_IN_CENTS, type BookDecision, type Season, type Week, type WeekType } from '@vault/shared';
 import { seasonDoc, weekDoc } from '../paths.js';
-
-/** SPEC.md §1.1 buy-in table. */
-export const DEFAULT_BUY_IN_CENTS: Record<WeekType, number> = {
-  regular: 1000,
-  wildcard: 2500,
-  divisional: 2500,
-  conference: 5000,
-  superbowl: 10000,
-};
 
 const STARTING_BOOK_DECISION: BookDecision = {
   rule: 'all_losses_keep',
@@ -73,7 +64,10 @@ export interface CreateSeasonParams {
   name: string;
   adminUid: string;
   week4LockAtMs: number;
-  week4BuyInCents?: number;
+  /** Per-week-type overrides; any type left unset falls back to DEFAULT_BUY_IN_CENTS. */
+  buyInDefaultsCents?: Partial<Record<WeekType, number>>;
+  /** Minimum cumulative preload required before a player's weekly buy-in can be marked paid. 0/omitted = no gate. */
+  requiredPreloadCents?: number;
 }
 
 /** SPEC.md §5 createSeason: season + first week (W04), Admin as Bookholder, share price 1.00. */
@@ -81,13 +75,15 @@ export async function createSeasonLogic(
   db: Firestore,
   params: CreateSeasonParams,
 ): Promise<{ seasonId: string; weekId: string }> {
-  const { seasonId, name, adminUid, week4LockAtMs, week4BuyInCents = DEFAULT_BUY_IN_CENTS.regular } = params;
+  const { seasonId, name, adminUid, week4LockAtMs, buyInDefaultsCents, requiredPreloadCents = 0 } = params;
 
   const seasonRef = seasonDoc(db, seasonId);
   const existing = await seasonRef.get();
   if (existing.exists) {
     throw new HttpsError('already-exists', `Season ${seasonId} already exists.`);
   }
+
+  const resolvedBuyInDefaults: Record<WeekType, number> = { ...DEFAULT_BUY_IN_CENTS, ...buyInDefaultsCents };
 
   const season: Season = {
     name,
@@ -99,6 +95,8 @@ export async function createSeasonLogic(
     totalShares: 0,
     vaultCents: 0,
     sharePrice: 1.0,
+    buyInDefaultsCents: resolvedBuyInDefaults,
+    requiredPreloadCents,
   };
   await seasonRef.set(season);
 
@@ -107,13 +105,23 @@ export async function createSeasonLogic(
     nflWeek: 4,
     type: 'regular',
     order: 0,
-    buyInCents: week4BuyInCents,
+    buyInCents: resolvedBuyInDefaults.regular,
     lockAtMs: week4LockAtMs,
     bookholderId: adminUid,
     sharePriceAtOpen: 1.0,
   });
 
   return { seasonId, weekId: 'W04' };
+}
+
+/** SPEC.md §5 (new) deleteSeason: Admin-only hard delete of a season and everything under it. Irreversible. */
+export async function deleteSeasonLogic(db: Firestore, seasonId: string): Promise<void> {
+  const seasonRef = seasonDoc(db, seasonId);
+  const existing = await seasonRef.get();
+  if (!existing.exists) {
+    throw new HttpsError('not-found', `Season ${seasonId} not found.`);
+  }
+  await db.recursiveDelete(seasonRef);
 }
 
 export interface CreateWeekParams {
@@ -189,10 +197,13 @@ export async function updateWeekLogic(db: Firestore, params: UpdateWeekParams): 
  * Default type/buy-in/lockAt for the week closeWeek auto-creates (SPEC.md §4,
  * §5 closeWeek step 8). Regular season increments nflWeek through 18, then
  * the playoff rounds progress in order; the Super Bowl has no next week.
- * These are defaults only — Milestone 6's Admin screens can edit them.
+ * `buyInDefaults` comes from the season doc (set at createSeason, editable
+ * only there for now) — these are defaults only, Milestone 6's Admin screens
+ * can edit any individual week's buy-in after it's created.
  */
 export function computeNextWeekPlan(
   current: Pick<Week, 'type' | 'nflWeek' | 'lockAt' | 'order'>,
+  buyInDefaults: Record<WeekType, number>,
 ): { weekId: string; nflWeek: number | null; type: WeekType; order: number; buyInCents: number; lockAtMs: number } | null {
   const lockAtMs = current.lockAt.toMillis() + 7 * 24 * 60 * 60 * 1000;
   const order = current.order + 1;
@@ -205,11 +216,11 @@ export function computeNextWeekPlan(
         nflWeek,
         type: 'regular',
         order,
-        buyInCents: DEFAULT_BUY_IN_CENTS.regular,
+        buyInCents: buyInDefaults.regular,
         lockAtMs,
       };
     }
-    return { weekId: 'WC', nflWeek: null, type: 'wildcard', order, buyInCents: DEFAULT_BUY_IN_CENTS.wildcard, lockAtMs };
+    return { weekId: 'WC', nflWeek: null, type: 'wildcard', order, buyInCents: buyInDefaults.wildcard, lockAtMs };
   }
 
   const progression: Partial<Record<WeekType, { weekId: string; type: WeekType }>> = {
@@ -219,5 +230,5 @@ export function computeNextWeekPlan(
   };
   const next = progression[current.type];
   if (!next) return null;
-  return { weekId: next.weekId, nflWeek: null, type: next.type, order, buyInCents: DEFAULT_BUY_IN_CENTS[next.type], lockAtMs };
+  return { weekId: next.weekId, nflWeek: null, type: next.type, order, buyInCents: buyInDefaults[next.type], lockAtMs };
 }

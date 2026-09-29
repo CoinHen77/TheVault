@@ -26,11 +26,12 @@ export async function markBuyInPaidLogic(
   const playerRef = playerDoc(db, playerId);
 
   return db.runTransaction(async (tx) => {
-    const [weekSnap, buyInSnap, standingSnap, playerSnap] = await Promise.all([
+    const [weekSnap, buyInSnap, standingSnap, playerSnap, seasonSnap] = await Promise.all([
       tx.get(weekRef),
       tx.get(buyInRef),
       tx.get(standingRef),
       tx.get(playerRef),
+      tx.get(seasonRef),
     ]);
 
     if (!weekSnap.exists) throw new HttpsError('not-found', `Week ${weekId} not found.`);
@@ -38,10 +39,20 @@ export async function markBuyInPaidLogic(
     if (week.status !== 'open') {
       throw new HttpsError('failed-precondition', `Week ${weekId} is ${week.status}, not open.`);
     }
+    if (!seasonSnap.exists) throw new HttpsError('not-found', `Season ${seasonId} not found.`);
+    const season = seasonSnap.data() as Season;
 
     const existingBuyIn = buyInSnap.data() as BuyIn | undefined;
     if (existingBuyIn?.paid) {
       throw new HttpsError('already-exists', `${playerId}'s buy-in for ${weekId} is already marked paid.`);
+    }
+
+    const preloadedCents = (standingSnap.data() as Standing | undefined)?.preloadedCents ?? 0;
+    if (preloadedCents < season.requiredPreloadCents) {
+      throw new HttpsError(
+        'failed-precondition',
+        `${playerId} has preloaded ${preloadedCents} of the required ${season.requiredPreloadCents} cents — mark their preload paid first.`,
+      );
     }
 
     const amountCents = amountCentsOverride ?? week.buyInCents;
@@ -79,6 +90,7 @@ export async function markBuyInPaidLogic(
         units: 0,
         weeksBoughtIn: 1,
         shares,
+        preloadedCents: 0,
       };
       tx.set(standingRef, standing);
     }

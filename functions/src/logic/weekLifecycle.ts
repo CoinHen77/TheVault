@@ -155,7 +155,7 @@ export async function closeWeekLogic(db: Firestore, params: CloseWeekParams): Pr
 
     let nextWeekId: string | null = null;
     if (week.type !== 'superbowl') {
-      const plan = computeNextWeekPlan(week);
+      const plan = computeNextWeekPlan(week, season.buyInDefaultsCents);
       if (plan) {
         nextWeekId = plan.weekId;
         tx.set(

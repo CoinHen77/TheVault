@@ -154,6 +154,100 @@ CLAUDE.md
 
 ---
 
+## Phase 1.5 — Heist redesign
+
+A frontend-only restyle of `/web` in the "Heist" look: vault door artwork, sealed tickets, envelopes and a lock-time reveal.
+- The mockups are the visual reference: https://claude.ai/artifact/BZ3JKnAdAafhcQuo9KxRbd
+- No business rules, data model (SPEC.md §3), Cloud Functions or security rules change. Everything shown is derived from existing data.
+- Target platforms: web browsers on phones, tablets and desktop, plus an installable PWA.
+
+Decisions already made:
+- **Wording:** use the full Heist wording, but in UI copy only. Data field names such as `bookholderId` stay the same. The terms are:
+  - "key holder" = Bookholder
+  - "The Code" = Rules
+  - "Control room" = Admin
+  - "Seal it" = submit pick
+  - "envelopes" = hidden picks
+  - "crew" = players
+- **Layout:** tablets and desktop (≥768px) use two columns. Phones use one column.
+- **Artwork:** the steel-and-brass vault door is cleared for use and needs no credit line. It comes in three states: closed, opening and open.
+- **Starting point:** keep the early design edits already in `/web`: fonts, number styling, `Icon.tsx` and the five-tab nav. Build on them.
+
+### [x] H0. Housekeeping
+- Commit Zach's in-progress work (preload, Rules, delete season, buy-in defaults) together with the early design edits, as the redesign's starting point.
+- Local dev must run against the emulators (`VITE_USE_EMULATORS=true`). `web/.env.local` currently points dev at production.
+- **Done when:** the working tree is clean and the redesign starts from a known commit.
+
+### [ ] H1. Foundation
+- Add steel tones to the theme tokens, alongside the existing green, black and gold.
+- Fonts: Playfair Display (display), Inter (body), JetBrains Mono (all money, odds and units).
+- Door artwork goes in `web/public/vault/` as closed, opening and open WebP files at 1x and 2x. Preload the closed door.
+- Build these components:
+  - `Ticket` (with notches and a torn-edge line)
+  - `WaxSeal`
+  - `ResultStamp`
+  - `Envelope`
+  - `DoorDial` (door plus countdown ring)
+  - `Avatar`
+  - `KeyBadge`
+  - `CapRing`
+  - `Podium`
+- All Heist wording lives in `web/src/lib/copy.ts`.
+- **Done when:** a scratch page renders every component in each of its states, and typecheck passes.
+
+### [ ] H2. Responsive shell
+- **Phones (<768px):** one column, the five-tab bottom bar (Home, Pick, Week, Sharp, Book), and Rules and Admin as header icons. Every tap target is at least 44px. Respect safe-area insets.
+- **≥768px:** the bottom bar becomes a left-hand menu that also lists Rules and Admin.
+- **Two-column layouts:**
+  - Home: door and Vault on the left; ticket and week on the right.
+  - Week: envelopes in 4 columns.
+  - Admin: grading beside buy-ins.
+- **Done when:** every screen works at 375, 768 and 1280px wide with no horizontal scroll.
+
+### [ ] H3. Player screens
+- **Sign-in:** large closed door.
+- **Home**, in three states:
+  - **Open:** the door inside the countdown ring, a sealed ticket, the envelope count and the key holder.
+  - **Locked or grading:** the open door, and the ticket stamped with its result. Show "Used in the Book" when the pick is in a book bet's legs.
+  - **After close:** a "last week" card from the most recent closed week. Show "You hold the key" when the player is the new Bookholder.
+  - All states show season record and rank from standings.
+- **Pick:** a live ticket preview showing units won or lost, and a "Seal it" button (the pick can be resealed until lock).
+- **Week:**
+  - Before lock: envelopes, with "?" for players still waiting.
+  - After lock: every ticket with its stamp, the W-L-P record, and who gets the key and why (from `bookDecision`).
+- **Sharp:** a podium for the top 3, then a list.
+- **Book:** a cap ring, placed bets as tickets, and pick chips for building a bet.
+- **Rules:** "The Code", five steps.
+- **Done when:** a seeded emulator week can be played through the UI as several fake users.
+
+### [ ] H4. The lock moment
+- The door animates closed → opening → open, then the envelopes flip open to reveal the tickets.
+- It plays once per week per device: on the first visit after lock, or live if the app is open at lock. A localStorage "seen" flag tracks this.
+- With `prefers-reduced-motion`, skip the animation and show the open door.
+- **Done when:** it plays exactly once per week per device and never blocks using the app.
+
+### [ ] H5. Admin "Control room"
+- Add a lifecycle stepper (Open → Locked → Grading → Closed) with the next action as the primary button.
+- One-tap W/L/P grading.
+- Move invites, the key override and seasons (create, delete, preload) into a secondary area.
+- Restyle only: no function changes.
+- **Done when:** Zach can run a full week as Admin, from season creation through close.
+
+### [ ] H6. Installable app
+- Add a web app manifest: name, dark theme color, standalone display, and icons at 192, 512 and maskable, made from the closed door. Add the Apple touch icon and the iOS standalone meta tags.
+- No offline service worker for now.
+- Point Firebase `authDomain` at the `web.app` domain so sign-in works in installed iOS apps.
+- In installed iOS apps, Google sign-in is the main path, because email links open in Safari instead of the app.
+- **Done when:** the app installs and signs in on an iPhone, an Android phone and an iPad, and still works in a normal browser tab.
+
+### [ ] H7. QA & launch (deploy only when Zach asks)
+- Run all tests; they should pass unchanged.
+- Test manually on iPhone Safari and as an installed app, Android Chrome and as an installed app, iPad, and desktop Chrome and Safari.
+- Set long cache headers for images and fonts in `firebase.json`.
+- Deploy hosting only: `firebase deploy --only hosting`.
+
+---
+
 ## Later phases (don't start without being asked)
 - **Phase 2:** full Book builder UI, Earned-the-Book screen, ledger/history with Vault chart, Weekly Recap image card, playoff weeks.
 - **Phase 3:** push notifications, Finalize Season UI, optional odds API and auto-grading.

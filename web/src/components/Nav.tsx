@@ -1,40 +1,31 @@
-export type Tab = 'dashboard' | 'pick' | 'week' | 'standings' | 'book' | 'admin';
+import Icon, { type IconName } from './Icon';
 
-const BASE_TABS: { id: Tab; label: string }[] = [
-  { id: 'dashboard', label: 'Home' },
-  { id: 'pick', label: 'Pick' },
-  { id: 'week', label: 'Week' },
-  { id: 'standings', label: 'Sharp' },
-  { id: 'book', label: 'Book' },
+export type Tab = 'dashboard' | 'pick' | 'week' | 'standings' | 'book' | 'rules' | 'admin';
+
+/** Rules and Admin live behind header icons so the bottom bar stays at five thumb-sized targets. */
+const TABS: { id: Tab; label: string; icon: IconName }[] = [
+  { id: 'dashboard', label: 'Home', icon: 'home' },
+  { id: 'pick', label: 'Pick', icon: 'target' },
+  { id: 'week', label: 'Week', icon: 'calendar' },
+  { id: 'standings', label: 'Sharp', icon: 'trophy' },
+  { id: 'book', label: 'Book', icon: 'book' },
 ];
 
-const ADMIN_TAB: { id: Tab; label: string } = { id: 'admin', label: 'Admin' };
-
-export default function Nav({
-  active,
-  onChange,
-  showAdmin,
-}: {
-  active: Tab;
-  onChange: (tab: Tab) => void;
-  showAdmin: boolean;
-}) {
-  const tabs = showAdmin ? [...BASE_TABS, ADMIN_TAB] : BASE_TABS;
+export default function Nav({ active, onChange }: { active: Tab; onChange: (tab: Tab) => void }) {
   return (
-    <nav className="sticky bottom-0 border-t border-vault-green-700/40 bg-vault-black/95 backdrop-blur">
-      <div className={`mx-auto grid max-w-md ${tabs.length === 6 ? 'grid-cols-6' : 'grid-cols-5'}`}>
-        {tabs.map((tab) => (
+    <nav className="sticky bottom-0 border-t border-vault-green-700/40 bg-vault-black/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
+      <div className="mx-auto grid max-w-md grid-cols-5">
+        {TABS.map((tab) => (
           <button
             key={tab.id}
             type="button"
             onClick={() => onChange(tab.id)}
-            className={`flex flex-col items-center gap-1 py-3 text-xs font-medium transition ${
-              active === tab.id ? 'text-vault-gold' : 'text-vault-gold-soft/40'
+            aria-current={active === tab.id ? 'page' : undefined}
+            className={`flex flex-col items-center gap-1 pb-2.5 pt-3 text-[11px] font-medium transition ${
+              active === tab.id ? 'text-vault-gold' : 'text-vault-gold-soft/50 hover:text-vault-gold-soft/80'
             }`}
           >
-            <span
-              className={`h-1.5 w-1.5 rounded-full ${active === tab.id ? 'bg-vault-gold' : 'bg-transparent'}`}
-            />
+            <Icon name={tab.icon} />
             {tab.label}
           </button>
         ))}

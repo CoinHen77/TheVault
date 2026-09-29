@@ -67,6 +67,11 @@ service cloud.firestore {
         }
       }
 
+      match /preloads/{uid} {
+        allow read: if isSignedIn();
+        allow write: if false; // markPreloadPaid / unmarkPreload only
+      }
+
       match /ledger/{entryId} {
         allow read: if isSignedIn();
         allow write: if false; // every ledger entry is written by a function

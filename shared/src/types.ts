@@ -31,6 +31,7 @@ export type BookDecisionTiebreak = 'none' | 'units' | 'weeks' | 'coin_flip';
 
 export type LedgerEntryType =
   | 'buy_in'
+  | 'preload'
   | 'book_net'
   | 'sharp_award'
   | 'final_distribution'
@@ -75,6 +76,10 @@ export interface Season {
   totalShares: number;
   vaultCents: number;
   sharePrice: number;
+  /** Per-week-type buy-in defaults used to pre-fill W04 and every auto-created week after it (editable per-week as today). */
+  buyInDefaultsCents: Record<WeekType, number>;
+  /** Minimum cumulative preload a player needs before markBuyInPaid will accept a weekly buy-in for them. 0 = no gate. */
+  requiredPreloadCents: number;
 }
 
 /** seasons/{seasonId}/weeks/{weekId} */
@@ -108,6 +113,20 @@ export interface Week {
 
 /** seasons/{seasonId}/weeks/{weekId}/buyIns/{uid} */
 export interface BuyIn {
+  amountCents: number;
+  paid: boolean;
+  paidAt: TimestampLike;
+  sharePrice: number;
+  sharesIssued: number;
+  markedBy: string;
+}
+
+/**
+ * seasons/{seasonId}/preloads/{uid} — a one-time, season-scoped deposit (not
+ * tied to any week) required before a player's weekly buy-ins can be marked
+ * paid, when Season.requiredPreloadCents > 0. Shape mirrors BuyIn.
+ */
+export interface Preload {
   amountCents: number;
   paid: boolean;
   paidAt: TimestampLike;
@@ -163,4 +182,6 @@ export interface Standing {
   units: number;
   weeksBoughtIn: number;
   shares: number;
+  /** Cumulative amount this player has preloaded this season, gating eligibility for markBuyInPaid against Season.requiredPreloadCents. */
+  preloadedCents: number;
 }

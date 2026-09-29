@@ -9,6 +9,7 @@
 export const SHARED_VERSION = '0.2.0';
 
 export * from './types.js';
+export * from './season.js';
 export * from './odds.js';
 export * from './units.js';
 export * from './shares.js';

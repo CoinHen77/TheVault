@@ -9,7 +9,9 @@ import AdminPickEntry from './AdminPickEntry';
 import BookBetsGrading from './BookBetsGrading';
 import BuyInsPanel from './BuyInsPanel';
 import CreateSeason from './CreateSeason';
+import DeleteSeason from './DeleteSeason';
 import InvitePlayers from './InvitePlayers';
+import PreloadPanel from './PreloadPanel';
 import OverrideBookholder from './OverrideBookholder';
 import PicksGrading from './PicksGrading';
 import { CreateNextWeek, WeekEditor, WeekPicker } from './WeekManager';
@@ -50,6 +52,8 @@ export default function Admin() {
         <CreateSeason />
       ) : (
         <>
+          <PreloadPanel seasonId={season.id} requiredPreloadCents={season.requiredPreloadCents} players={players} />
+
           <WeekPicker
             weeks={weeks}
             selectedWeekId={selectedWeekId}
@@ -69,7 +73,14 @@ export default function Admin() {
             </>
           )}
 
-          <CreateNextWeek seasonId={season.id} weeks={weeks} players={players} />
+          <CreateNextWeek
+            seasonId={season.id}
+            weeks={weeks}
+            players={players}
+            buyInDefaults={season.buyInDefaultsCents}
+          />
+
+          <DeleteSeason seasonId={season.id} />
         </>
       )}
     </div>

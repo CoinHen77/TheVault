@@ -1,19 +1,6 @@
 import type { Week, WeekType } from '@vault/shared';
 
-/**
- * SPEC.md §1.1 buy-in table, mirrored here as form defaults only (the
- * server-side source of truth is `functions/src/logic/season.ts`
- * `DEFAULT_BUY_IN_CENTS` — this copy never runs business logic, it just
- * pre-fills the Admin's "create week" form, which the Admin can edit before
- * submitting).
- */
-export const DEFAULT_BUY_IN_CENTS: Record<WeekType, number> = {
-  regular: 1000,
-  wildcard: 2500,
-  divisional: 2500,
-  conference: 5000,
-  superbowl: 10000,
-};
+export { DEFAULT_BUY_IN_CENTS } from '@vault/shared';
 
 export const WEEK_TYPE_OPTIONS: WeekType[] = ['regular', 'wildcard', 'divisional', 'conference', 'superbowl'];
 
@@ -22,8 +9,14 @@ export const WEEK_TYPE_OPTIONS: WeekType[] = ['regular', 'wildcard', 'divisional
  * week, for pre-filling the Admin's manual "create week" form (SPEC.md §4:
  * closeWeek already auto-creates this most of the time — this manual form is
  * the fallback/override path). The Admin can edit every field before saving.
+ * Mirrors `computeNextWeekPlan` in functions/src/logic/season.ts.
+ * `buyInDefaults` should be the season's own `buyInDefaultsCents`, so this
+ * suggestion matches what closeWeek would actually use.
  */
-export function suggestNextWeek(current: Week & { id: string }): {
+export function suggestNextWeek(
+  current: Week & { id: string },
+  buyInDefaults: Record<WeekType, number>,
+): {
   weekId: string;
   nflWeek: number | null;
   type: WeekType;
@@ -37,9 +30,9 @@ export function suggestNextWeek(current: Week & { id: string }): {
   if (current.type === 'regular') {
     const nflWeek = (current.nflWeek ?? 3) + 1;
     if (nflWeek <= 18) {
-      return { weekId: `W${String(nflWeek).padStart(2, '0')}`, nflWeek, type: 'regular', order, buyInCents: DEFAULT_BUY_IN_CENTS.regular, lockAtMs };
+      return { weekId: `W${String(nflWeek).padStart(2, '0')}`, nflWeek, type: 'regular', order, buyInCents: buyInDefaults.regular, lockAtMs };
     }
-    return { weekId: 'WC', nflWeek: null, type: 'wildcard', order, buyInCents: DEFAULT_BUY_IN_CENTS.wildcard, lockAtMs };
+    return { weekId: 'WC', nflWeek: null, type: 'wildcard', order, buyInCents: buyInDefaults.wildcard, lockAtMs };
   }
 
   const progression: Partial<Record<WeekType, { weekId: string; type: WeekType }>> = {
@@ -48,6 +41,6 @@ export function suggestNextWeek(current: Week & { id: string }): {
     conference: { weekId: 'SB', type: 'superbowl' },
   };
   const next = progression[current.type];
-  if (!next) return { weekId: '', nflWeek: null, type: 'superbowl', order, buyInCents: DEFAULT_BUY_IN_CENTS.superbowl, lockAtMs };
-  return { weekId: next.weekId, nflWeek: null, type: next.type, order, buyInCents: DEFAULT_BUY_IN_CENTS[next.type], lockAtMs };
+  if (!next) return { weekId: '', nflWeek: null, type: 'superbowl', order, buyInCents: buyInDefaults.superbowl, lockAtMs };
+  return { weekId: next.weekId, nflWeek: null, type: next.type, order, buyInCents: buyInDefaults[next.type], lockAtMs };
 }

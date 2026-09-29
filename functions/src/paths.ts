@@ -61,3 +61,11 @@ export function standingsCol(db: Firestore, seasonId: string) {
 export function standingDoc(db: Firestore, seasonId: string, uid: string) {
   return standingsCol(db, seasonId).doc(uid);
 }
+
+export function preloadsCol(db: Firestore, seasonId: string) {
+  return seasonDoc(db, seasonId).collection('preloads');
+}
+
+export function preloadDoc(db: Firestore, seasonId: string, uid: string) {
+  return preloadsCol(db, seasonId).doc(uid);
+}

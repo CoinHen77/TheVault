@@ -1,5 +1,6 @@
 import { useAuth } from '../auth/AuthProvider';
-import { Card, EmptyState, ResultPill, WeekStatusPill } from '../components/ui';
+import Icon from '../components/Icon';
+import { Avatar, Card, EmptyState, ResultPill, WeekStatusPill } from '../components/ui';
 import { useVaultData } from '../hooks/VaultDataProvider';
 import { useBuyIns, useMyPick, usePicks } from '../hooks/useWeekData';
 import { formatOdds, weekLabel } from '../lib/format';
@@ -19,6 +20,8 @@ export default function WeekCard() {
 
   const paidPlayerIds = (buyIns ?? []).filter((b) => b.paid).map((b) => b.id);
   const submittedSet = new Set(week.submittedPlayerIds);
+  const submittedCount = paidPlayerIds.filter((uid) => submittedSet.has(uid)).length;
+  const submittedPct = paidPlayerIds.length ? Math.round((submittedCount / paidPlayerIds.length) * 100) : 0;
 
   const record = allPicks
     ? allPicks.reduce(
@@ -34,15 +37,34 @@ export default function WeekCard() {
 
   return (
     <div className="flex flex-col gap-4">
-      <Card title={weekLabel(week)}>
+      <Card>
         <div className="flex items-center justify-between">
-          <WeekStatusPill status={week.status} />
-          {record && (
-            <span className="text-sm text-vault-gold-soft/70">
-              {record.w}-{record.l}-{record.p}
+          <div className="flex items-center gap-2">
+            <h2 className="text-base font-semibold text-vault-gold-soft">{weekLabel(week)}</h2>
+            <WeekStatusPill status={week.status} />
+          </div>
+          {record ? (
+            <span className="font-mono text-sm">
+              <span className="text-vault-win">{record.w}</span>
+              <span className="text-vault-gold-soft/40">-</span>
+              <span className="text-vault-loss">{record.l}</span>
+              <span className="text-vault-gold-soft/40">-</span>
+              <span className="text-sky-400">{record.p}</span>
+            </span>
+          ) : (
+            <span className="text-xs text-vault-gold-soft/60">
+              <span className="font-mono text-vault-gold-soft/90">
+                {submittedCount}/{paidPlayerIds.length}
+              </span>{' '}
+              in
             </span>
           )}
         </div>
+        {!showFullRoster && (
+          <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-vault-green-800">
+            <div className="h-full rounded-full bg-vault-gold transition-all" style={{ width: `${submittedPct}%` }} />
+          </div>
+        )}
       </Card>
 
       {showFullRoster && allPicks ? (
@@ -53,13 +75,18 @@ export default function WeekCard() {
               .sort((a, b) => (players[a.id]?.displayName ?? a.id).localeCompare(players[b.id]?.displayName ?? b.id))
               .map((p) => (
                 <li key={p.id} className="flex items-center justify-between gap-3 py-3 text-sm">
-                  <div className="min-w-0">
-                    <p className="truncate font-medium text-vault-gold-soft">
-                      {players[p.id]?.displayName ?? p.id}
-                    </p>
-                    <p className="truncate text-xs text-vault-gold-soft/50">
-                      {p.pickText} · {p.gameText} · {formatOdds(p.americanOdds)}
-                    </p>
+                  <div className="flex min-w-0 items-center gap-3">
+                    <Avatar name={players[p.id]?.displayName ?? p.id} highlight={p.id === week.bookholderId} />
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-vault-gold-soft">
+                        {p.pickText}{' '}
+                        <span className="font-mono text-xs font-normal text-vault-gold-soft/60">{formatOdds(p.americanOdds)}</span>
+                      </p>
+                      <p className="truncate text-xs text-vault-gold-soft/55">
+                        {players[p.id]?.displayName ?? p.id}
+                        {p.gameText && ` · ${p.gameText}`}
+                      </p>
+                    </div>
                   </div>
                   <ResultPill result={p.result} />
                 </li>
@@ -75,11 +102,20 @@ export default function WeekCard() {
               .sort((a, b) => (players[a]?.displayName ?? a).localeCompare(players[b]?.displayName ?? b))
               .map((uid) => (
                 <li key={uid} className="flex items-center justify-between py-2.5 text-sm">
-                  <span className="text-vault-gold-soft/90">{players[uid]?.displayName ?? uid}</span>
+                  <span className="flex items-center gap-3 text-vault-gold-soft/90">
+                    <Avatar name={players[uid]?.displayName ?? uid} highlight={uid === week.bookholderId} />
+                    {players[uid]?.displayName ?? uid}
+                  </span>
                   {submittedSet.has(uid) ? (
-                    <span className="text-xs font-medium text-emerald-400">Submitted</span>
+                    <span className="flex items-center gap-1 text-xs font-medium text-vault-win">
+                      <Icon name="lock" className="h-3.5 w-3.5" />
+                      Sealed
+                    </span>
                   ) : (
-                    <span className="text-xs text-vault-gold-soft/30">Waiting</span>
+                    <span className="flex items-center gap-1 text-xs text-vault-gold-soft/50">
+                      <Icon name="clock" className="h-3.5 w-3.5" />
+                      Waiting
+                    </span>
                   )}
                 </li>
               ))}
@@ -87,10 +123,11 @@ export default function WeekCard() {
           </ul>
           {myPick && (
             <p className="mt-4 border-t border-vault-green-700/30 pt-3 text-sm text-vault-gold-soft/70">
-              Your pick: <span className="text-vault-gold-soft">{myPick.pickText}</span> ({formatOdds(myPick.americanOdds)})
+              Your pick: <span className="text-vault-gold-soft">{myPick.pickText}</span>{' '}
+              <span className="font-mono text-xs">{formatOdds(myPick.americanOdds)}</span>
             </p>
           )}
-          <p className="mt-3 text-xs text-vault-gold-soft/40">
+          <p className="mt-3 text-xs text-vault-gold-soft/55">
             Picks stay hidden until {weekLabel(week)} locks.
           </p>
         </Card>

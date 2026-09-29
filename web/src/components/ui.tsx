@@ -14,11 +14,13 @@ export function Field({ label, children }: { label: string; children: ReactNode 
   );
 }
 
-export function Card({ title, children }: { title?: string; children: ReactNode }) {
+export function Card({ title, children, accent = false }: { title?: string; children: ReactNode; accent?: boolean }) {
   return (
-    <section className="rounded-xl border border-vault-green-700/40 bg-vault-green-900/60 p-4">
+    <section
+      className={`rounded-2xl border bg-vault-green-900/50 p-4 ${accent ? 'border-vault-gold/50' : 'border-vault-green-700/40'}`}
+    >
       {title && (
-        <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest text-vault-gold-soft/50">{title}</h2>
+        <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-vault-gold-soft/60">{title}</h2>
       )}
       {children}
     </section>
@@ -26,11 +28,11 @@ export function Card({ title, children }: { title?: string; children: ReactNode 
 }
 
 export function Stat({ label, value, tone = 'default' }: { label: string; value: ReactNode; tone?: 'default' | 'good' | 'bad' }) {
-  const toneClass = tone === 'good' ? 'text-emerald-400' : tone === 'bad' ? 'text-red-400' : 'text-vault-gold';
+  const toneClass = tone === 'good' ? 'text-vault-win' : tone === 'bad' ? 'text-vault-loss' : 'text-vault-gold-soft';
   return (
     <div className="flex flex-col gap-0.5">
-      <dt className="text-[11px] uppercase tracking-wide text-vault-gold-soft/50">{label}</dt>
-      <dd className={`text-lg font-semibold ${toneClass}`}>{value}</dd>
+      <dt className="text-[11px] uppercase tracking-wide text-vault-gold-soft/60">{label}</dt>
+      <dd className={`font-mono text-lg font-medium ${toneClass}`}>{value}</dd>
     </div>
   );
 }
@@ -43,7 +45,7 @@ const WEEK_STATUS_LABEL: Record<WeekStatus, string> = {
 };
 
 const WEEK_STATUS_CLASS: Record<WeekStatus, string> = {
-  open: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+  open: 'bg-vault-win/15 text-vault-win border-vault-win/30',
   locked: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
   grading: 'bg-sky-500/15 text-sky-400 border-sky-500/30',
   closed: 'bg-vault-gold-soft/10 text-vault-gold-soft/60 border-vault-gold-soft/20',
@@ -66,8 +68,8 @@ const RESULT_LABEL: Record<PickResult, string> = {
 
 const RESULT_CLASS: Record<PickResult, string> = {
   pending: 'bg-vault-gold-soft/10 text-vault-gold-soft/60 border-vault-gold-soft/20',
-  win: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
-  loss: 'bg-red-500/15 text-red-400 border-red-500/30',
+  win: 'bg-vault-win/15 text-vault-win border-vault-win/30',
+  loss: 'bg-vault-loss/15 text-vault-loss border-vault-loss/30',
   push: 'bg-sky-500/15 text-sky-400 border-sky-500/30',
 };
 
@@ -81,10 +83,29 @@ export function ResultPill({ result }: { result: PickResult }) {
 
 export function ErrorBanner({ message }: { message: string }) {
   return (
-    <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">{message}</p>
+    <p className="rounded-lg border border-vault-loss/30 bg-vault-loss/10 px-3 py-2 text-sm text-vault-loss">{message}</p>
   );
 }
 
 export function EmptyState({ children }: { children: ReactNode }) {
-  return <p className="text-sm text-vault-gold-soft/40">{children}</p>;
+  return <p className="text-sm text-vault-gold-soft/55">{children}</p>;
+}
+
+/** Initials in a circle; gold ring marks someone special (e.g. the Bookholder). */
+export function Avatar({ name, highlight = false }: { name: string; highlight?: boolean }) {
+  const initials = name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]!.toUpperCase())
+    .join('');
+  return (
+    <span
+      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-medium ${
+        highlight ? 'bg-vault-gold/15 text-vault-gold ring-1 ring-vault-gold/50' : 'bg-vault-green-800 text-vault-gold-soft/80'
+      }`}
+    >
+      {initials || '?'}
+    </span>
+  );
 }
