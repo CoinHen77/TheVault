@@ -239,13 +239,18 @@ Decisions already made:
 - Point Firebase `authDomain` at the `web.app` domain so sign-in works in installed iOS apps.
 - In installed iOS apps, Google sign-in is the main path, because email links open in Safari instead of the app.
 - **Done when:** the app installs and signs in on an iPhone, an Android phone and an iPad, and still works in a normal browser tab.
+- **Status:** built, and checked in a local production build (manifest, icon sizes, iOS tags). Installed apps use a Google redirect instead of a popup, and installed iPhone/iPad apps show a note that email links open in Safari. The device checks need the deployed app, so they happen in H7; tick H6 once they pass.
 
 ### [ ] H7. QA & launch (deploy only when Zach asks)
+- Before deploying, set up same-site sign-in (H6):
+  1. In Google Cloud console → APIs & Services → Credentials → the OAuth client Firebase uses, add `https://the-vault-f417a.web.app/__/auth/handler` as an authorized redirect URI.
+  2. In `web/.env.local`, change `VITE_FIREBASE_AUTH_DOMAIN` to `the-vault-f417a.web.app`. Don't change it before step 1, or Google sign-in breaks.
 - Run all tests; they should pass unchanged.
 - Test manually on iPhone Safari and as an installed app, Android Chrome and as an installed app, iPad, and desktop Chrome and Safari.
 - On one phone with "Reduce motion" turned on, confirm the lock moment shows no animation (the in-app browser can't emulate this setting, so H4 couldn't test it).
 - Set long cache headers for images and fonts in `firebase.json`.
-- Deploy hosting only: `firebase deploy --only hosting`.
+- Deploy functions, rules, indexes and hosting together: the preload and season-defaults changes (commits a208362, e5e3807) touch Cloud Functions and security rules, so a hosting-only deploy would call functions that don't exist in production yet.
+- On real devices, install the app (iPhone and iPad: Share → Add to Home Screen; Android: Install app) and sign in with Google in the installed app. Then tick H6.
 
 ---
 

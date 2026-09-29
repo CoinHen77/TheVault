@@ -1,14 +1,17 @@
 import {
+  getRedirectResult,
   GoogleAuthProvider,
   isSignInWithEmailLink,
   sendSignInLinkToEmail,
   signInWithEmailLink,
   signInWithPopup,
+  signInWithRedirect,
 } from 'firebase/auth';
 import { useEffect, useState } from 'react';
 import Door from '../components/heist/Door';
 import { COPY } from '../lib/copy';
 import { auth, usingEmulators } from '../lib/firebase';
+import { isIOS, isStandalone } from '../lib/standalone';
 
 const EMAIL_STORAGE_KEY = 'vault:emailForSignIn';
 
@@ -18,6 +21,13 @@ export default function SignIn() {
   const [needsEmailToComplete, setNeedsEmailToComplete] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [showSafariNote] = useState(() => isStandalone() && isIOS());
+
+  // Coming back from a Google redirect (installed-app path below): surface errors
+  // such as an uninvited account. A successful result signs in via AuthProvider.
+  useEffect(() => {
+    getRedirectResult(auth).catch((err: unknown) => setError(err instanceof Error ? err.message : String(err)));
+  }, []);
 
   useEffect(() => {
     if (!isSignInWithEmailLink(auth, window.location.href)) return;
@@ -48,6 +58,12 @@ export default function SignIn() {
     setBusy(true);
     setError(null);
     try {
+      // Installed home-screen apps (iOS especially) can't hand a popup's result
+      // back to the app, so they sign in with a full-page redirect instead.
+      if (isStandalone()) {
+        await signInWithRedirect(auth, new GoogleAuthProvider());
+        return;
+      }
       await signInWithPopup(auth, new GoogleAuthProvider());
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -101,7 +117,7 @@ export default function SignIn() {
         type="button"
         onClick={() => void handleGoogleSignIn()}
         disabled={busy}
-        className="rounded-lg bg-vault-gold px-4 py-3 text-sm font-semibold text-vault-black transition hover:bg-vault-gold-soft disabled:opacity-50"
+        className="min-h-11 rounded-lg bg-vault-gold px-4 text-sm font-semibold text-vault-black transition hover:bg-vault-gold-soft disabled:opacity-50"
       >
         Continue with Google
       </button>
@@ -129,10 +145,16 @@ export default function SignIn() {
           <button
             type="submit"
             disabled={busy || !email}
-            className="rounded-lg border border-vault-green-700/60 px-4 py-3 text-sm font-medium text-vault-gold-soft transition hover:border-vault-gold/60 disabled:opacity-50"
+            className="min-h-11 rounded-lg border border-vault-steel-700 px-4 text-sm font-medium text-vault-gold-soft transition hover:border-vault-gold/60 disabled:opacity-50"
           >
             Email me a sign-in link
           </button>
+          {showSafariNote && (
+            <p className="text-xs leading-relaxed text-amber-400">
+              In this home-screen app, email links open in Safari instead. Use Continue with Google here, or sign in
+              from Safari.
+            </p>
+          )}
         </form>
       )}
 
@@ -168,7 +190,7 @@ function EmailInput({ email, onChange }: { email: string; onChange: (v: string) 
       placeholder="you@example.com"
       value={email}
       onChange={(e) => onChange(e.target.value)}
-      className="rounded-lg border border-vault-green-700/60 bg-vault-black/40 px-3 py-3 text-base text-vault-gold-soft outline-none placeholder:text-vault-gold-soft/40 focus:border-vault-gold/60"
+      className="min-h-11 rounded-lg border border-vault-steel-700 bg-vault-black/40 px-3 py-2.5 text-base text-vault-gold-soft outline-none placeholder:text-vault-gold-soft/40 focus:border-vault-gold/60"
     />
   );
 }
@@ -178,7 +200,7 @@ function PrimaryButton({ children, disabled }: { children: React.ReactNode; disa
     <button
       type="submit"
       disabled={disabled}
-      className="rounded-lg bg-vault-gold px-4 py-3 text-sm font-semibold text-vault-black transition hover:bg-vault-gold-soft disabled:opacity-50"
+      className="min-h-11 rounded-lg bg-vault-gold px-4 text-sm font-semibold text-vault-black transition hover:bg-vault-gold-soft disabled:opacity-50"
     >
       {children}
     </button>

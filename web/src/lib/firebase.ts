@@ -10,7 +10,9 @@ import { connectFunctionsEmulator, getFunctions } from 'firebase/functions';
  */
 const firebaseConfig: FirebaseOptions = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY ?? 'emulator-api-key',
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN ?? 'the-vault-f417a.firebaseapp.com',
+  // The app's own Hosting domain (not firebaseapp.com) so sign-in stays same-site: Safari and
+  // installed iOS apps block the cross-site storage the firebaseapp.com handler relies on (CLAUDE.md H6).
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN ?? 'the-vault-f417a.web.app',
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID ?? 'the-vault-f417a',
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET ?? 'the-vault-f417a.appspot.com',
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID ?? '000000000000',
