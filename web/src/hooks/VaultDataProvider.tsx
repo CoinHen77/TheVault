@@ -1,6 +1,6 @@
 import { collection, limit, onSnapshot, query, where } from 'firebase/firestore';
 import { createContext, use, useEffect, useState, type ReactNode } from 'react';
-import type { Player, Season } from '@vault/shared';
+import { withSeasonDefaults, type Player, type Season } from '@vault/shared';
 import { db } from '../lib/firebase';
 import { useCollectionData } from './useCollectionData';
 import { useDocData } from './useDocData';
@@ -29,7 +29,7 @@ export function VaultDataProvider({ children }: { children: ReactNode }) {
       q,
       (snap) => {
         const d = snap.docs[0];
-        setSeason(d ? { id: d.id, ...(d.data() as Season) } : null);
+        setSeason(d ? withSeasonDefaults({ id: d.id, ...(d.data() as Season) }) : null);
         setSeasonLoading(false);
       },
       () => setSeasonLoading(false),

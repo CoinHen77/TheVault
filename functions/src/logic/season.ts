@@ -1,6 +1,6 @@
 import { Timestamp, type Firestore } from 'firebase-admin/firestore';
 import { HttpsError } from 'firebase-functions/v2/https';
-import { DEFAULT_BUY_IN_CENTS, type BookDecision, type Season, type Week, type WeekType } from '@vault/shared';
+import { DEFAULT_BUY_IN_CENTS, withSeasonDefaults, type BookDecision, type Season, type Week, type WeekType } from '@vault/shared';
 import { seasonDoc, weekDoc } from '../paths.js';
 
 const STARTING_BOOK_DECISION: BookDecision = {
@@ -141,7 +141,7 @@ export async function createWeekLogic(db: Firestore, params: CreateWeekParams): 
   if (!seasonSnap.exists) {
     throw new HttpsError('not-found', `Season ${params.seasonId} not found.`);
   }
-  const season = seasonSnap.data() as Season;
+  const season = withSeasonDefaults(seasonSnap.data() as Season);
 
   await createWeekDoc(db, params.seasonId, {
     weekId: params.weekId,

@@ -21,7 +21,7 @@ process.env.FIREBASE_AUTH_EMULATOR_HOST ??= '127.0.0.1:9099';
 import { initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore, Timestamp } from 'firebase-admin/firestore';
-import { sharesForBuyIn } from '@vault/shared';
+import { DEFAULT_BUY_IN_CENTS, sharesForBuyIn } from '@vault/shared';
 
 const PROJECT_ID = process.env.GCLOUD_PROJECT ?? 'the-vault-f417a';
 
@@ -98,6 +98,8 @@ async function seedSeasonAndWeek() {
     totalShares: 0,
     vaultCents: 0,
     sharePrice: SHARE_PRICE_AT_OPEN,
+    buyInDefaultsCents: DEFAULT_BUY_IN_CENTS,
+    requiredPreloadCents: 0,
   });
 
   await seasonRef.collection('weeks').doc(WEEK_ID).set({

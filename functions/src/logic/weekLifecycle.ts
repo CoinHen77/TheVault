@@ -3,6 +3,7 @@ import { HttpsError } from 'firebase-functions/v2/https';
 import {
   decideNextBookholder,
   sharePrice,
+  withSeasonDefaults,
   type BookBet,
   type BookholderCandidate,
   type PickResult,
@@ -68,7 +69,7 @@ export async function closeWeekLogic(db: Firestore, params: CloseWeekParams): Pr
       throw new HttpsError('failed-precondition', `Week ${weekId} is ${week.status}, not grading.`);
     }
     if (!seasonSnap.exists) throw new HttpsError('not-found', `Season ${seasonId} not found.`);
-    const season = seasonSnap.data() as Season;
+    const season = withSeasonDefaults(seasonSnap.data() as Season);
 
     const picks = picksSnap.docs.map((d) => ({ id: d.id, data: d.data() as PickDoc }));
     const bets = betsSnap.docs.map((d) => d.data() as BookBet);
@@ -226,7 +227,7 @@ export async function finalizeSeasonLogic(db: Firestore, params: FinalizeSeasonP
   const seasonRef = seasonDoc(db, seasonId);
   const seasonSnap = await seasonRef.get();
   if (!seasonSnap.exists) throw new HttpsError('not-found', `Season ${seasonId} not found.`);
-  const season = seasonSnap.data() as Season;
+  const season = withSeasonDefaults(seasonSnap.data() as Season);
   if (season.status !== 'active') {
     throw new HttpsError('failed-precondition', `Season ${seasonId} is already ${season.status}.`);
   }

@@ -1,6 +1,6 @@
 import { FieldValue, Timestamp, type Firestore } from 'firebase-admin/firestore';
 import { HttpsError } from 'firebase-functions/v2/https';
-import { sharesForBuyIn, type BuyIn, type Player, type Season, type Standing, type Week } from '@vault/shared';
+import { sharesForBuyIn, withSeasonDefaults, type BuyIn, type Player, type Season, type Standing, type Week } from '@vault/shared';
 import { buyInDoc, ledgerCol, pickDoc, playerDoc, seasonDoc, standingDoc, weekDoc } from '../paths.js';
 
 export interface MarkBuyInPaidParams {
@@ -40,7 +40,7 @@ export async function markBuyInPaidLogic(
       throw new HttpsError('failed-precondition', `Week ${weekId} is ${week.status}, not open.`);
     }
     if (!seasonSnap.exists) throw new HttpsError('not-found', `Season ${seasonId} not found.`);
-    const season = seasonSnap.data() as Season;
+    const season = withSeasonDefaults(seasonSnap.data() as Season);
 
     const existingBuyIn = buyInSnap.data() as BuyIn | undefined;
     if (existingBuyIn?.paid) {

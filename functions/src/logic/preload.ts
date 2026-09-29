@@ -1,6 +1,6 @@
 import { FieldValue, Timestamp, type Firestore } from 'firebase-admin/firestore';
 import { HttpsError } from 'firebase-functions/v2/https';
-import { sharesForBuyIn, type Player, type Preload, type Season, type Standing } from '@vault/shared';
+import { sharesForBuyIn, withSeasonDefaults, type Player, type Preload, type Season, type Standing } from '@vault/shared';
 import { ledgerCol, playerDoc, preloadDoc, seasonDoc, standingDoc } from '../paths.js';
 
 export interface MarkPreloadPaidParams {
@@ -38,7 +38,7 @@ export async function markPreloadPaidLogic(
     ]);
 
     if (!seasonSnap.exists) throw new HttpsError('not-found', `Season ${seasonId} not found.`);
-    const season = seasonSnap.data() as Season;
+    const season = withSeasonDefaults(seasonSnap.data() as Season);
 
     const existingPreload = preloadSnap.data() as Preload | undefined;
     if (existingPreload?.paid) {

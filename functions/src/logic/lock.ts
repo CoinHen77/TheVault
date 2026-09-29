@@ -1,5 +1,5 @@
 import { Timestamp, type Firestore } from 'firebase-admin/firestore';
-import { bookCapCents, type Season, type Week } from '@vault/shared';
+import { bookCapCents, withSeasonDefaults, type Season, type Week } from '@vault/shared';
 import { seasonDoc } from '../paths.js';
 
 export interface LockDueWeeksParams {
@@ -38,7 +38,7 @@ export async function lockDueWeeksLogic(db: Firestore, params: LockDueWeeksParam
       const week = freshWeekSnap.data() as Week;
       if (week.status !== 'open' || week.lockAt.toMillis() > nowMs) return;
 
-      const season = seasonSnap.data() as Season;
+      const season = withSeasonDefaults(seasonSnap.data() as Season);
       const openingVaultCents = season.vaultCents;
       const capCents = bookCapCents(openingVaultCents, season.bookCapPct);
 
