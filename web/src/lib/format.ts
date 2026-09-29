@@ -17,6 +17,15 @@ export function formatShares(shares: number): string {
   return shares.toFixed(2);
 }
 
+/**
+ * Parses typed American odds. Accepts typographic minus/dashes (iOS long-press, paste) and a
+ * leading "+". Returns NaN for anything that isn't a whole number.
+ */
+export function parseOddsInput(input: string): number {
+  const normalized = input.trim().replace(/[−‒–—﹣－]/g, '-');
+  return /^[+-]?\d+$/.test(normalized) ? Number(normalized) : NaN;
+}
+
 export function formatOdds(odds: number): string {
   return odds > 0 ? `+${odds}` : `${odds}`;
 }

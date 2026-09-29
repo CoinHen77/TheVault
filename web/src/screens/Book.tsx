@@ -12,7 +12,7 @@ import { useVaultData } from '../hooks/VaultDataProvider';
 import { useBookBets, usePicks } from '../hooks/useWeekData';
 import { functions } from '../lib/firebase';
 import { COPY } from '../lib/copy';
-import { formatCents, formatOdds, weekLabel } from '../lib/format';
+import { formatCents, formatOdds, parseOddsInput, weekLabel } from '../lib/format';
 
 const placeBookBet = httpsCallable<
   {
@@ -149,7 +149,7 @@ function BetBuilder({
 
   const stakeCents = Math.round(Number.parseFloat(stakeInput) * 100);
   const stakeValid = stakeInput.trim() !== '' && Number.isInteger(stakeCents) && stakeCents > 0;
-  const ticketOdds = Number.parseInt(ticketOddsInput, 10);
+  const ticketOdds = parseOddsInput(ticketOddsInput);
   const ticketOddsValid = ticketOddsInput.trim() !== '' && isValidAmericanOdds(ticketOdds);
   const payoutOverrideCents = overridePayout ? Math.round(Number.parseFloat(payoutInput) * 100) : null;
   const payoutOverrideValid = !overridePayout || (Number.isInteger(payoutOverrideCents) && (payoutOverrideCents ?? 0) > 0);
@@ -242,7 +242,10 @@ function BetBuilder({
               id="bet-odds"
               value={ticketOddsInput}
               onChange={(e) => setTicketOddsInput(e.target.value)}
-              inputMode="numeric"
+              inputMode="text"
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
               placeholder="+264"
               className={inputClass}
             />

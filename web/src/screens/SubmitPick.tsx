@@ -11,7 +11,7 @@ import { useVaultData } from '../hooks/VaultDataProvider';
 import { useMyBuyIn, useMyPick } from '../hooks/useWeekData';
 import { functions } from '../lib/firebase';
 import { COPY } from '../lib/copy';
-import { formatCents, formatOdds, formatTimestampET, formatUnits, weekLabel } from '../lib/format';
+import { formatCents, formatOdds, formatTimestampET, formatUnits, parseOddsInput, weekLabel } from '../lib/format';
 
 const submitPick = httpsCallable<
   { seasonId: string; weekId: string; pickText: string; gameText: string; americanOdds: number },
@@ -52,7 +52,7 @@ export default function SubmitPick() {
           ? `Your ${formatCents(week.buyInCents)} buy-in isn't marked paid yet. Once the Admin marks it, you can seal a pick.`
           : null;
 
-  const odds = Number.parseInt(oddsInput, 10);
+  const odds = parseOddsInput(oddsInput);
   const oddsValid = oddsInput.trim() !== '' && isValidAmericanOdds(odds);
   const impliedUnits = oddsValid ? unitsForPick(odds, 'win') : null;
 
@@ -149,7 +149,10 @@ export default function SubmitPick() {
                 value={oddsInput}
                 onChange={(e) => setOddsInput(e.target.value)}
                 placeholder="-138"
-                inputMode="numeric"
+                inputMode="text"
+                autoComplete="off"
+                autoCorrect="off"
+                spellCheck={false}
                 disabled={Boolean(disabledReason)}
                 className={`${inputClass} font-mono`}
               />

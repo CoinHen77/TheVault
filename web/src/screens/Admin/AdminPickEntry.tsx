@@ -6,6 +6,7 @@ import { Card, EmptyState, ErrorBanner, Field, inputClass } from '../../componen
 import { useBuyIns } from '../../hooks/useWeekData';
 import { functions } from '../../lib/firebase';
 import { sortedPlayers } from '../../lib/players';
+import { parseOddsInput } from '../../lib/format';
 
 const adminSubmitPick = httpsCallable<
   { seasonId: string; weekId: string; playerId: string; pickText: string; gameText: string; americanOdds: number },
@@ -58,7 +59,7 @@ export default function AdminPickEntry({
     );
   }
 
-  const odds = Number.parseInt(oddsInput, 10);
+  const odds = parseOddsInput(oddsInput);
   const oddsValid = oddsInput.trim() !== '' && isValidAmericanOdds(odds);
   const canSubmit = playerId !== '' && gameText.trim() !== '' && pickText.trim() !== '' && oddsValid && !submitting;
 
@@ -114,7 +115,10 @@ export default function AdminPickEntry({
           <input
             value={oddsInput}
             onChange={(e) => setOddsInput(e.target.value)}
-            inputMode="numeric"
+            inputMode="text"
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
             placeholder="-138"
             className={inputClass}
           />
