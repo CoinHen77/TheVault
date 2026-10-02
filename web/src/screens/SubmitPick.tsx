@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { isValidAmericanOdds, unitsForPick } from '@vault/shared';
 import { useAuth } from '../auth/AuthProvider';
 import Countdown from '../components/Countdown';
+import OddsBoard from '../components/OddsBoard';
 import PickTicket, { ticketLabel } from '../components/heist/PickTicket';
 import { WaxSeal } from '../components/heist/Seals';
 import Ticket, { TicketStat } from '../components/heist/Ticket';
@@ -120,6 +121,17 @@ export default function SubmitPick() {
                 {disabledReason}
               </p>
             )}
+
+            <OddsBoard
+              lockAtMs={week.lockAt.toMillis()}
+              disabled={Boolean(disabledReason)}
+              onSelect={(s) => {
+                setGameText(s.gameText);
+                setPickText(s.pickText);
+                setOddsInput(String(s.americanOdds));
+                setSuccess(false);
+              }}
+            />
 
             <Field label="Game">
               <input

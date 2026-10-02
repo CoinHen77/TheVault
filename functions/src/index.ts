@@ -9,10 +9,11 @@
  */
 import { initializeApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
+import { defineSecret } from 'firebase-functions/params';
 import { setGlobalOptions } from 'firebase-functions/v2';
 import { onCall } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
-import { SHARED_VERSION } from '@vault/shared';
+import { ODDS_PULL_SCHEDULE, ODDS_PULL_TIMEZONE, SHARED_VERSION } from '@vault/shared';
 
 import { rejectUninvitedUsers } from './auth.js';
 import { isAdminRequest, requireAdmin, requireUid } from './context.js';
@@ -24,6 +25,7 @@ import {
   updateBookBetLogic,
 } from './logic/bookBets.js';
 import { lockDueWeeksLogic } from './logic/lock.js';
+import { pullOddsLogic, setOddsPausedLogic } from './logic/odds.js';
 import { adminSubmitPickLogic, gradePickLogic, submitPickLogic } from './logic/picks.js';
 import { markPreloadPaidLogic, unmarkPreloadLogic } from './logic/preload.js';
 import {
@@ -171,6 +173,42 @@ export const deleteBookBet = onCall((request) => {
 /** SPEC.md §5 lockDueWeeks: every 5 minutes. */
 export const lockDueWeeks = onSchedule('every 5 minutes', async () => {
   await lockDueWeeksLogic(db());
+});
+
+/**
+ * The Odds API key lives in Google Cloud Secret Manager. Zach sets it himself
+ * (never through a command Claude runs); the value never touches the repo or
+ * Firestore.
+ */
+const oddsApiKey = defineSecret('ODDS_API_KEY');
+
+/**
+ * DraftKings lines every 4 hours, Tuesday–Friday ET, while a week is open.
+ * No retries: a failed pull waits for the next slot rather than spending
+ * more credits.
+ */
+export const pullOdds = onSchedule(
+  {
+    schedule: ODDS_PULL_SCHEDULE,
+    timeZone: ODDS_PULL_TIMEZONE,
+    secrets: [oddsApiKey],
+    retryCount: 0,
+    maxInstances: 1,
+  },
+  async () => {
+    await pullOddsLogic(db(), { apiKey: oddsApiKey.value(), trigger: 'schedule' });
+  },
+);
+
+/** Control room "Pull now". Same credit guards as the schedule. */
+export const pullOddsNow = onCall({ secrets: [oddsApiKey], maxInstances: 1 }, (request) => {
+  requireAdmin(request);
+  return pullOddsLogic(db(), { apiKey: oddsApiKey.value(), trigger: 'manual' });
+});
+
+export const setOddsPaused = onCall((request) => {
+  requireAdmin(request);
+  return setOddsPausedLogic(db(), request.data);
 });
 
 /** SPEC.md §6 membership gate. */

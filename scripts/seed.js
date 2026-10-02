@@ -186,11 +186,49 @@ async function seedBuyIns() {
   );
 }
 
+/**
+ * A made-up odds/feed doc so the Pick screen's board has something to show
+ * without calling The Odds API (the emulator never has a real key). Lines are
+ * invented; kickoffs are relative to the seeded week's lock.
+ */
+async function seedOddsFeed() {
+  const HOUR = 3_600_000;
+  const weekSnap = await db.collection('seasons').doc(SEASON_ID).collection('weeks').doc(WEEK_ID).get();
+  const lockAtMs = weekSnap.get('lockAt')?.toMillis() ?? LOCK_AT_MS;
+  const game = (eventId, awayTeam, homeTeam, hoursAfterLock, spread, total) => ({
+    eventId,
+    awayTeam,
+    homeTeam,
+    commenceAt: Timestamp.fromMillis(lockAtMs + hoursAfterLock * HOUR),
+    lines: {
+      spreadAway: { odds: -110, point: spread },
+      spreadHome: { odds: -110, point: -spread },
+      mlAway: { odds: spread < 0 ? -150 : 130, point: null },
+      mlHome: { odds: spread < 0 ? 130 : -150, point: null },
+      over: { odds: -108, point: total },
+      under: { odds: -112, point: total },
+    },
+  });
+  await db.collection('odds').doc('feed').set({
+    bookmaker: 'draftkings',
+    pulledAt: Timestamp.now(),
+    games: [
+      game('seed-1', 'Chicago Bears', 'Carolina Panthers', 2, -2.5, 47.5),
+      game('seed-2', 'New Orleans Saints', 'Detroit Lions', 2, 6.5, 49.5),
+      game('seed-3', 'Philadelphia Eagles', 'Washington Commanders', 5.4, -3, 44.5),
+      game('seed-4', 'Buffalo Bills', 'Kansas City Chiefs', 9.3, 1, 51),
+      game('seed-5', 'Seattle Seahawks', 'San Francisco 49ers', 33.25, 3.5, 43.5),
+    ],
+  });
+  console.log('Seeded a fake odds/feed with 5 games.');
+}
+
 await seedPlayersAndInvites();
 const seasonIsNew = await seedSeasonAndWeek();
 if (seasonIsNew) {
   await seedBuyIns();
 }
+await seedOddsFeed();
 
 console.log('\nSign in as any of these (invite-only, Google or email-link):');
 for (const p of SEED_PLAYERS) console.log(`  ${p.email}${p.isAdmin ? '  (Admin, Week 4 Bookholder)' : ''}`);

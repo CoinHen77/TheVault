@@ -13,6 +13,7 @@ import BuyInsPanel from './BuyInsPanel';
 import CreateSeason from './CreateSeason';
 import DeleteSeason from './DeleteSeason';
 import InvitePlayers from './InvitePlayers';
+import OddsMonitor, { useOddsMonitorHint } from './OddsMonitor';
 import PlayersPanel from './PlayersPanel';
 import PreloadPanel from './PreloadPanel';
 import OverrideBookholder from './OverrideBookholder';
@@ -30,6 +31,7 @@ export default function Admin() {
   const { isAdmin } = useAuth();
   const { season, players } = useVaultData();
   const { data: weeks } = useWeeks(season?.id ?? null);
+  const oddsHint = useOddsMonitorHint();
   const [selectedWeekId, setSelectedWeekId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -110,6 +112,9 @@ export default function Admin() {
             <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-vault-gold-soft/60">
               Setup and tools
             </h2>
+            <ToolPanel title="Odds feed" hint={oddsHint}>
+              <OddsMonitor />
+            </ToolPanel>
             <ToolPanel title="Invite players" hint="Only invited emails can sign in">
               <InvitePlayers />
             </ToolPanel>

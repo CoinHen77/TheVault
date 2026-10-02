@@ -30,6 +30,10 @@ export const COPY = {
   envelopes: 'Envelopes',
   envelopesIn: 'Envelopes in',
 
+  // Odds board (The Odds API)
+  oddsBoard: 'The board',
+  oddsBoardHint: 'DraftKings lines. Tap one to fill your ticket, then edit anything you like.',
+
   // Lock and reveal
   doorLocked: 'The door is locked',
   doorOpening: 'Opening…',

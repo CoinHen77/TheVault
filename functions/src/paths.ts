@@ -69,3 +69,20 @@ export function preloadsCol(db: Firestore, seasonId: string) {
 export function preloadDoc(db: Firestore, seasonId: string, uid: string) {
   return preloadsCol(db, seasonId).doc(uid);
 }
+
+/** The latest DraftKings lines from The Odds API (see @vault/shared oddsFeed). */
+export function oddsFeedDoc(db: Firestore) {
+  return db.collection('odds').doc('feed');
+}
+
+export function oddsSettingsDoc(db: Firestore) {
+  return db.collection('odds').doc('settings');
+}
+
+export function oddsUsageCol(db: Firestore) {
+  return db.collection('oddsUsage');
+}
+
+export function oddsUsageDoc(db: Firestore, monthKey: string) {
+  return oddsUsageCol(db).doc(monthKey);
+}

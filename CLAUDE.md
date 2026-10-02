@@ -233,15 +233,15 @@ Decisions already made:
 - Restyle only: no function changes.
 - **Done when:** Zach can run a full week as Admin, from season creation through close.
 
-### [ ] H6. Installable app
+### [x] H6. Installable app
 - Add a web app manifest: name, dark theme color, standalone display, and icons at 192, 512 and maskable, made from the closed door. Add the Apple touch icon and the iOS standalone meta tags.
 - No offline service worker for now.
 - Point Firebase `authDomain` at the `web.app` domain so sign-in works in installed iOS apps.
 - In installed iOS apps, Google sign-in is the main path, because email links open in Safari instead of the app.
 - **Done when:** the app installs and signs in on an iPhone, an Android phone and an iPad, and still works in a normal browser tab.
-- **Status:** built, and checked in a local production build (manifest, icon sizes, iOS tags). Installed apps use a Google redirect instead of a popup, and installed iPhone/iPad apps show a note that email links open in Safari. The device checks need the deployed app, so they happen in H7; tick H6 once they pass.
+- **Status:** done. Device checks (iPhone, Android, iPad, installed apps) passed in H7, per Zach on 2026-10-02.
 
-### [ ] H7. QA & launch (deploy only when Zach asks)
+### [x] H7. QA & launch (deploy only when Zach asks)
 - Before deploying, set up same-site sign-in (H6):
   1. In Google Cloud console → APIs & Services → Credentials → the OAuth client Firebase uses, add `https://the-vault-f417a.web.app/__/auth/handler` as an authorized redirect URI.
   2. In `web/.env.local`, change `VITE_FIREBASE_AUTH_DOMAIN` to `the-vault-f417a.web.app`. Don't change it before step 1, or Google sign-in breaks.

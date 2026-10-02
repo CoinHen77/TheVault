@@ -65,6 +65,25 @@ service cloud.firestore {
       allow update: if false;
     }
 
+    // odds/feed — DraftKings lines from The Odds API, written only by the
+    // pullOdds functions. odds/settings (the Admin's pause switch) is changed
+    // through setOddsPaused.
+    match /odds/feed {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    match /odds/settings {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    // oddsUsage/{YYYY-MM} — credit usage for the Control room monitor.
+    match /oddsUsage/{monthKey} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
     match /seasons/{seasonId} {
       allow read: if isSignedIn();
       allow write: if false; // createSeason / finalizeSeason only

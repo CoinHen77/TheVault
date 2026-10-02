@@ -357,4 +357,38 @@ describe('firestore.rules', () => {
       );
     });
   });
+
+  describe('odds feed (The Odds API)', () => {
+    beforeEach(async () => {
+      await testEnv.withSecurityRulesDisabled(async (ctx) => {
+        const db = ctx.firestore();
+        await setDoc(doc(db, 'odds/feed'), { games: [], pulledAt: Timestamp.now(), bookmaker: 'draftkings' });
+        await setDoc(doc(db, 'odds/settings'), { paused: false });
+        await setDoc(doc(db, 'oddsUsage/2026-10'), { monthKey: '2026-10', calls: 1, creditsUsed: 3 });
+      });
+    });
+
+    it('lets any signed-in player read the feed, but not anonymous users', async () => {
+      await assertSucceeds(getDoc(doc(asPlayer('P1').firestore(), 'odds/feed')));
+      await assertFails(getDoc(doc(anon().firestore(), 'odds/feed')));
+    });
+
+    it('keeps usage and settings Admin-only', async () => {
+      const p1 = asPlayer('P1').firestore();
+      await assertFails(getDoc(doc(p1, 'oddsUsage/2026-10')));
+      await assertFails(getDoc(doc(p1, 'odds/settings')));
+
+      const admin = asAdmin().firestore();
+      await assertSucceeds(getDoc(doc(admin, 'oddsUsage/2026-10')));
+      await assertSucceeds(getDoc(doc(admin, 'odds/settings')));
+    });
+
+    it('denies every client write, even from an Admin', async () => {
+      const admin = asAdmin().firestore();
+      await assertFails(setDoc(doc(admin, 'odds/feed'), { games: [] }));
+      await assertFails(updateDoc(doc(admin, 'odds/settings'), { paused: true }));
+      await assertFails(updateDoc(doc(admin, 'oddsUsage/2026-10'), { creditsUsed: 0 }));
+      await assertFails(setDoc(doc(asPlayer('P1').firestore(), 'odds/feed'), { games: [] }));
+    });
+  });
 });
