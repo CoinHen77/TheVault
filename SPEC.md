@@ -155,6 +155,8 @@ seasons/{seasonId}/weeks/{weekId}   // weekId e.g. "W04", "WC", "DIV", "CONF", "
     coinFlipResult?: string
   }
   closedAt: Timestamp
+  remindersSent?: { eve?: boolean, lastCall?: boolean }  // push reminders already sent (server-only)
+  bookAnnouncedAt?: Timestamp  // key holder tapped "Book's in" (server-only, once)
 
 seasons/{seasonId}/weeks/{weekId}/buyIns/{uid}
   amountCents: number
@@ -192,6 +194,17 @@ seasons/{seasonId}/ledger/{entryId}
   note: string
   createdAt: Timestamp
   createdBy: string
+
+pushTokens/{token}            // one per device with push notifications on
+  uid: string                // the player; clients add/remove only their own
+  platform: string
+  createdAt: Timestamp
+
+notificationPrefs/{uid}       // written by the player; a missing field means on
+  reminders: boolean
+  vaultOpen: boolean
+  bookIn: boolean
+  weekResults: boolean
 
 seasons/{seasonId}/standings/{uid}   // maintained by functions; read-only to clients
   playerId: string
@@ -244,7 +257,7 @@ All functions are callable (HTTPS onCall) unless noted. Each function checks aut
 | `unmarkBuyIn` | Admin | Reverses the above while the week is `open`; also deletes the player's pick |
 | `submitPick` | Player | Validates the week is `open`, the buy-in is paid, now < lockAt, and the odds are valid; upserts `picks/{uid}` |
 | `adminSubmitPick` | Admin | Enters or edits a pick on a paid player's behalf. Allowed in any status except `closed`, so picks collected offline (e.g. in the group chat) can be entered after lock. Records `enteredBy` on the pick doc |
-| `lockDueWeeks` | Scheduled (every 5 min) | For weeks with `status=open` and `lockAt<=now`, sets `locked`, `openingVaultCents` = season `vaultCents`, and `bookCapCents = floor(opening × 0.25)` |
+| `lockDueWeeks` | Scheduled (every 5 min) | For weeks with `status=open` and `lockAt<=now`, sets `locked`, `openingVaultCents` = season `vaultCents`, and `bookCapCents = floor(opening × 0.25)`. The same run sends seal-your-pick push reminders 20 h and 1 h before `lockAt` to paid players without a pick |
 | `openVaultEarly` | Admin | Locks an `open` week before `lockAt` with the same snapshot as `lockDueWeeks`. Fails unless at least one buy-in is paid and every paid player has a pick. Leaves `lockAt` unchanged |
 | `placeBookBet` | Bookholder | Validates the week is `locked`, every leg is a pick in this week, stake > 0, and the sum of stakes ≤ `bookCapCents`; records the ticket odds and default payout |
 | `updateBookBet` / `deleteBookBet` | Bookholder or Admin | Allowed only while the week is `locked` |
@@ -253,6 +266,8 @@ All functions are callable (HTTPS onCall) unless noted. Each function checks aut
 | `gradeBookBet` | Admin | Sets the result, optionally overrides payout, and computes `netCents` |
 | `closeWeek` | Admin | See below |
 | `overrideBookholder` | Admin | Sets the next or current Bookholder and writes a `bookDecision` with `admin_override` |
+| `announceBook` | Bookholder (or Admin) | While `locked`, after at least one bet, once per week: sets `bookAnnouncedAt` and pushes "The Book's in" to the crew |
+| `onWeekUpdated` | Firestore trigger | Pushes "the vault is open" when a week goes `open` → `locked`, and the week's results when it closes |
 | `finalizeSeason` | Admin | After the SB week closes, computes the Sharp (units leader; tie → surfaced to Admin to resolve), writes the `sharp_award` entry, computes each player's 90% share-based portion, and sets season `finalized` |
 
 ### `closeWeek` (single transaction)

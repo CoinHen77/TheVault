@@ -1,12 +1,14 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AuthProvider, useAuth } from './auth/AuthProvider';
 import LockOverlay from './components/heist/LockOverlay';
 import Icon from './components/Icon';
-import { ADMIN_TAB, BottomNav, COMMENTS_TAB, RULES_TAB, SideNav, type NavItem, type Tab } from './components/Nav';
+import { ADMIN_TAB, ALERTS_TAB, BottomNav, COMMENTS_TAB, RULES_TAB, SideNav, type NavItem, type Tab } from './components/Nav';
+import { refreshPushToken } from './lib/push';
 import { COPY } from './lib/copy';
 import { LockRevealProvider } from './hooks/LockReveal';
 import { VaultDataProvider } from './hooks/VaultDataProvider';
 import Admin from './screens/Admin';
+import Alerts from './screens/Alerts';
 import Book from './screens/Book';
 import Comments from './screens/Comments';
 import Dashboard from './screens/Dashboard';
@@ -51,9 +53,34 @@ function Gate() {
 /** Home, Week and Admin use two columns from 768px; the rest read best as one column. */
 const WIDE_TABS: ReadonlySet<Tab> = new Set(['dashboard', 'week', 'admin']);
 
+const TABS: ReadonlySet<string> = new Set<Tab>(['dashboard', 'pick', 'week', 'standings', 'book', 'rules', 'comments', 'alerts', 'admin']);
+
+/** A notification tap opens the app at /?tab=…; read it once, then tidy the URL. */
+function initialTab(): Tab {
+  const tab = new URLSearchParams(window.location.search).get('tab');
+  if (tab) window.history.replaceState(null, '', window.location.pathname);
+  return tab && TABS.has(tab) ? (tab as Tab) : 'dashboard';
+}
+
 function AppShell() {
-  const { player, isAdmin, signOut } = useAuth();
-  const [tab, setTab] = useState<Tab>('dashboard');
+  const { user, player, isAdmin, signOut } = useAuth();
+  const [tab, setTab] = useState<Tab>(initialTab);
+  const uid = user?.uid ?? null;
+
+  // A notification tapped while the app is already open arrives as a message from the push worker.
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return;
+    const onMessage = (event: MessageEvent) => {
+      const data = event.data as { type?: string; tab?: string } | null;
+      if (data?.type === 'vault-open-tab' && data.tab && TABS.has(data.tab)) setTab(data.tab as Tab);
+    };
+    navigator.serviceWorker.addEventListener('message', onMessage);
+    return () => navigator.serviceWorker.removeEventListener('message', onMessage);
+  }, []);
+
+  useEffect(() => {
+    if (uid) void refreshPushToken(uid).catch(() => undefined);
+  }, [uid]);
 
   return (
     <div className="flex min-h-full w-full pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]">
@@ -70,19 +97,20 @@ function AppShell() {
           <button
             type="button"
             onClick={() => setTab('dashboard')}
-            className="min-h-11 font-display text-2xl font-bold text-vault-gold"
+            className="min-h-11 whitespace-nowrap font-display text-xl font-bold text-vault-gold min-[400px]:text-2xl"
           >
             {COPY.appName}
           </button>
           <div className="flex items-center">
             <HeaderIconButton item={RULES_TAB} active={tab === 'rules'} onClick={() => setTab('rules')} />
             <HeaderIconButton item={COMMENTS_TAB} active={tab === 'comments'} onClick={() => setTab('comments')} />
+            <HeaderIconButton item={ALERTS_TAB} active={tab === 'alerts'} onClick={() => setTab('alerts')} />
             {isAdmin && <HeaderIconButton item={ADMIN_TAB} active={tab === 'admin'} onClick={() => setTab('admin')} />}
             <button
               type="button"
               onClick={() => void signOut()}
               title={player?.displayName ? `Signed in as ${player.displayName}` : undefined}
-              className="min-h-11 rounded-lg px-2 text-xs text-vault-gold-soft/55 transition hover:text-vault-gold-soft/90"
+              className="min-h-11 whitespace-nowrap rounded-lg px-1.5 text-xs text-vault-gold-soft/55 transition hover:text-vault-gold-soft/90"
             >
               Sign out
             </button>
@@ -99,6 +127,7 @@ function AppShell() {
           {tab === 'book' && <Book />}
           {tab === 'rules' && <Rules />}
           {tab === 'comments' && <Comments />}
+          {tab === 'alerts' && <Alerts />}
           {tab === 'admin' && isAdmin && <Admin />}
         </main>
 

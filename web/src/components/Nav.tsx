@@ -2,7 +2,7 @@ import { COPY } from '../lib/copy';
 import Door from './heist/Door';
 import Icon, { type IconName } from './Icon';
 
-export type Tab = 'dashboard' | 'pick' | 'week' | 'standings' | 'book' | 'rules' | 'comments' | 'admin';
+export type Tab = 'dashboard' | 'pick' | 'week' | 'standings' | 'book' | 'rules' | 'comments' | 'alerts' | 'admin';
 
 export interface NavItem {
   id: Tab;
@@ -19,9 +19,10 @@ export const MAIN_TABS: NavItem[] = [
   { id: 'book', label: 'Book', icon: 'book' },
 ];
 
-/** Rules, comments, and Admin: header icons on phones, the lower side-menu group from 768px up. */
+/** Rules, comments, alerts and Admin: header icons on phones, the lower side-menu group from 768px up. */
 export const RULES_TAB: NavItem = { id: 'rules', label: COPY.rules, icon: 'rules' };
 export const COMMENTS_TAB: NavItem = { id: 'comments', label: "Kade's", icon: 'message' };
+export const ALERTS_TAB: NavItem = { id: 'alerts', label: 'Alerts', icon: 'bell' };
 export const ADMIN_TAB: NavItem = { id: 'admin', label: COPY.admin, icon: 'gear' };
 
 /** Phone (<768px) bottom bar: five thumb-sized targets above the home-indicator inset. */
@@ -69,7 +70,7 @@ export function SideNav({
   playerName: string | null;
   onSignOut: () => void;
 }) {
-  const secondary = showAdmin ? [RULES_TAB, COMMENTS_TAB, ADMIN_TAB] : [RULES_TAB, COMMENTS_TAB];
+  const secondary = showAdmin ? [RULES_TAB, COMMENTS_TAB, ALERTS_TAB, ADMIN_TAB] : [RULES_TAB, COMMENTS_TAB, ALERTS_TAB];
   return (
     <aside className="sticky top-0 hidden h-dvh w-20 shrink-0 flex-col border-r border-vault-line bg-vault-black px-2 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-[max(1.5rem,env(safe-area-inset-top))] md:flex lg:w-60 lg:px-4">
       <button

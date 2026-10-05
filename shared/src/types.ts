@@ -116,6 +116,10 @@ export interface Week {
   nextBookholderId: string;
   bookDecision: BookDecision;
   closedAt: TimestampLike;
+  /** Push reminders already sent for this week (server-only; see notifications.ts). */
+  remindersSent?: Partial<Record<'eve' | 'lastCall', boolean>>;
+  /** When the key holder tapped "Book's in" (server-only; it can be sent once). */
+  bookAnnouncedAt?: TimestampLike;
 }
 
 /** seasons/{seasonId}/weeks/{weekId}/buyIns/{uid} */

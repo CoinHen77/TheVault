@@ -83,6 +83,31 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // pushTokens/{token} — one doc per device that turned notifications on.
+    // A player can register, refresh or remove only their own devices;
+    // the Cloud Functions read them (Admin SDK) to send.
+    match /pushTokens/{token} {
+      allow read, delete: if isSignedIn() && resource.data.uid == request.auth.uid;
+      allow create, update: if isSignedIn()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['uid', 'platform', 'createdAt'])
+        && request.resource.data.platform is string
+        && request.resource.data.platform.size() <= 100
+        && request.resource.data.createdAt is timestamp
+        && (resource == null || resource.data.uid == request.auth.uid);
+    }
+
+    // notificationPrefs/{uid} — each player's on/off switch per kind.
+    match /notificationPrefs/{uid} {
+      allow read: if isSelf(uid);
+      allow write: if isSelf(uid)
+        && request.resource.data.keys().hasOnly(['reminders', 'vaultOpen', 'bookIn', 'weekResults'])
+        && request.resource.data.get('reminders', true) is bool
+        && request.resource.data.get('vaultOpen', true) is bool
+        && request.resource.data.get('bookIn', true) is bool
+        && request.resource.data.get('weekResults', true) is bool;
+    }
+
     // oddsUsage/{YYYY-MM} — credit usage for the Control room monitor.
     match /oddsUsage/{monthKey} {
       allow read: if isAdmin();

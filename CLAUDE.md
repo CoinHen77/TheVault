@@ -236,7 +236,7 @@ Decisions already made:
 
 ### [x] H6. Installable app
 - Add a web app manifest: name, dark theme color, standalone display, and icons at 192, 512 and maskable, made from the closed door. Add the Apple touch icon and the iOS standalone meta tags.
-- No offline service worker for now.
+- No offline service worker for now. (Since 2026-10-05 there is a notification-only worker, `web/public/push-sw.js`, for push alerts: it does no caching.)
 - Point Firebase `authDomain` at the `web.app` domain so sign-in works in installed iOS apps.
 - In installed iOS apps, Google sign-in is the main path, because email links open in Safari instead of the app.
 - **Done when:** the app installs and signs in on an iPhone, an Android phone and an iPad, and still works in a normal browser tab.

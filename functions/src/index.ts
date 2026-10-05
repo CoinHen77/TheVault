@@ -11,11 +11,13 @@ import { initializeApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import { defineSecret } from 'firebase-functions/params';
 import { setGlobalOptions } from 'firebase-functions/v2';
+import { onDocumentUpdated } from 'firebase-functions/v2/firestore';
 import { onCall } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
-import { ODDS_PULL_SCHEDULES, ODDS_PULL_TIMEZONE, SHARED_VERSION, type OddsSport } from '@vault/shared';
+import { ODDS_PULL_SCHEDULES, ODDS_PULL_TIMEZONE, SHARED_VERSION, type OddsSport, type Week } from '@vault/shared';
 
 import { rejectUninvitedUsers } from './auth.js';
+import { fcmSender } from './push.js';
 import { isAdminRequest, requireAdmin, requireUid } from './context.js';
 import { markBuyInPaidLogic, unmarkBuyInLogic } from './logic/buyIns.js';
 import {
@@ -25,6 +27,7 @@ import {
   updateBookBetLogic,
 } from './logic/bookBets.js';
 import { lockDueWeeksLogic, openVaultEarlyLogic } from './logic/lock.js';
+import { announceBookLogic, onWeekUpdatedLogic, sendDueRemindersLogic } from './logic/notify.js';
 import { parseOddsSport, pullOddsLogic, setOddsPausedLogic } from './logic/odds.js';
 import { adminSubmitPickLogic, gradePickLogic, submitPickLogic } from './logic/picks.js';
 import { markPreloadPaidLogic, unmarkPreloadLogic } from './logic/preload.js';
@@ -170,9 +173,27 @@ export const deleteBookBet = onCall((request) => {
   return deleteBookBetLogic(db(), { ...request.data, uid, isAdmin: isAdminRequest(request) });
 });
 
-/** SPEC.md §5 lockDueWeeks: every 5 minutes. */
+/**
+ * SPEC.md §5 lockDueWeeks: every 5 minutes. The same run sends any
+ * seal-your-pick reminder that has come due.
+ */
 export const lockDueWeeks = onSchedule('every 5 minutes', async () => {
   await lockDueWeeksLogic(db());
+  await sendDueRemindersLogic(db(), fcmSender);
+});
+
+/** Push "the vault is open" when a week locks, and the results when it closes. */
+export const onWeekUpdated = onDocumentUpdated({ document: 'seasons/{seasonId}/weeks/{weekId}', retry: false }, async (event) => {
+  const before = event.data?.before.data() as Week | undefined;
+  const after = event.data?.after.data() as Week | undefined;
+  if (!before || !after || before.status === after.status) return;
+  await onWeekUpdatedLogic(db(), fcmSender, { seasonId: event.params.seasonId, weekId: event.params.weekId, before, after });
+});
+
+/** The key holder's "Book's in" button. */
+export const announceBook = onCall((request) => {
+  const uid = requireUid(request);
+  return announceBookLogic(db(), fcmSender, { ...request.data, uid, isAdmin: isAdminRequest(request) });
 });
 
 /** Admin: lock the current week before lockAt once every paid player has a pick. */

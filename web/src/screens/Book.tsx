@@ -11,7 +11,7 @@ import { useVaultData } from '../hooks/VaultDataProvider';
 import { useBookBets, usePicks } from '../hooks/useWeekData';
 import { functions } from '../lib/firebase';
 import { COPY } from '../lib/copy';
-import { formatCents, formatOdds, parseOddsInput, weekLabel } from '../lib/format';
+import { formatCents, formatOdds, formatTimestampET, parseOddsInput, weekLabel } from '../lib/format';
 
 const placeBookBet = httpsCallable<
   {
@@ -69,6 +69,16 @@ export default function Book() {
         <CapRing usedCents={stakedCents} capCents={week.bookCapCents} />
       )}
 
+      {week.status === 'locked' && (isBookholder || week.bookAnnouncedAt) && (
+        <AnnounceBook
+          seasonId={season.id}
+          weekId={week.id}
+          betCount={bets?.length ?? 0}
+          announcedAt={week.bookAnnouncedAt ?? null}
+          isBookholder={isBookholder}
+        />
+      )}
+
       {canPlaceBets && picks && (
         <BetBuilder
           seasonId={season.id}
@@ -96,6 +106,70 @@ export default function Book() {
         </section>
       )}
     </div>
+  );
+}
+
+const announceBook = httpsCallable<{ seasonId: string; weekId: string }, { bets: number; stakedCents: number }>(
+  functions,
+  'announceBook',
+);
+
+/**
+ * "Book's in": the key holder tells the crew the bets are placed (one push to
+ * everyone with "The Book's in" switched on). It can be sent once.
+ */
+function AnnounceBook({
+  seasonId,
+  weekId,
+  betCount,
+  announcedAt,
+  isBookholder,
+}: {
+  seasonId: string;
+  weekId: string;
+  betCount: number;
+  announcedAt: import('@vault/shared').TimestampLike | null;
+  isBookholder: boolean;
+}) {
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  if (announcedAt) {
+    return (
+      <p className="rounded-xl border border-vault-line bg-vault-panel px-3 py-2.5 text-sm text-vault-gold-soft/70">
+        The crew was told the Book&apos;s in at {formatTimestampET(announcedAt)}.
+      </p>
+    );
+  }
+  if (!isBookholder) return null;
+
+  return (
+    <section className="flex flex-col gap-2 rounded-2xl border border-vault-gold/40 bg-vault-panel p-4">
+      <p className="text-sm text-vault-gold-soft/80">
+        {betCount === 0
+          ? "Place your bets, then let the crew know the Book's in."
+          : "Done placing bets? Let the crew know what's riding. You can only send this once."}
+      </p>
+      <button
+        type="button"
+        disabled={submitting || betCount === 0}
+        onClick={async () => {
+          setSubmitting(true);
+          setError(null);
+          try {
+            await announceBook({ seasonId, weekId });
+          } catch (err) {
+            setError(err instanceof Error ? err.message : String(err));
+          } finally {
+            setSubmitting(false);
+          }
+        }}
+        className="min-h-11 rounded-lg bg-vault-gold px-4 text-sm font-semibold text-vault-black transition hover:bg-vault-gold-soft disabled:opacity-40"
+      >
+        {submitting ? 'Sending…' : "Book's in: tell the crew"}
+      </button>
+      {error && <ErrorBanner message={error} />}
+    </section>
   );
 }
 

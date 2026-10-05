@@ -15,6 +15,7 @@ const PATHS = {
   key: 'M8 15a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM12 11h9M18 11v3M21 11v2',
   envelope: 'M3 6h18v12H3zM3 7l9 6 9-6',
   message: 'M4 5h16v11H8l-4 4z',
+  bell: 'M6 16v-5a6 6 0 0 1 12 0v5l2 2H4zM10 21h4',
 } as const;
 
 export type IconName = keyof typeof PATHS;

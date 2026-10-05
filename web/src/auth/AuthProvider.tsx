@@ -3,6 +3,7 @@ import { doc, onSnapshot } from 'firebase/firestore';
 import { createContext, use, useEffect, useState, type ReactNode } from 'react';
 import type { Player } from '@vault/shared';
 import { auth, db } from '../lib/firebase';
+import { disablePush } from '../lib/push';
 
 interface AuthState {
   status: 'loading' | 'signed-out' | 'signed-in';
@@ -47,7 +48,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     user,
     player,
     isAdmin,
-    signOut: () => firebaseSignOut(auth),
+    // Stop this device's notifications first: removing its token needs the player still signed in.
+    signOut: async () => {
+      await disablePush().catch(() => undefined);
+      await firebaseSignOut(auth);
+    },
   };
 
   return <AuthContext value={value}>{children}</AuthContext>;

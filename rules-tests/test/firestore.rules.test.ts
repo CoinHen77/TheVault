@@ -395,4 +395,34 @@ describe('firestore.rules', () => {
       await assertFails(setDoc(doc(admin, 'odds/feedNcaaf'), { games: [] }));
     });
   });
+  describe('push notifications', () => {
+    const token = (uid: string) => ({ uid, platform: 'test', createdAt: Timestamp.now() });
+
+    it('lets a player register, read and remove only their own device tokens', async () => {
+      const p1 = asPlayer('P1').firestore();
+      await assertSucceeds(setDoc(doc(p1, 'pushTokens/tok-1'), token('P1')));
+      await assertSucceeds(getDoc(doc(p1, 'pushTokens/tok-1')));
+      await assertFails(getDoc(doc(asPlayer('P2').firestore(), 'pushTokens/tok-1')));
+      await assertFails(deleteDoc(doc(asPlayer('P2').firestore(), 'pushTokens/tok-1')));
+      await assertFails(setDoc(doc(asPlayer('P2').firestore(), 'pushTokens/tok-1'), token('P2')));
+      await assertSucceeds(deleteDoc(doc(p1, 'pushTokens/tok-1')));
+    });
+
+    it("rejects a token filed under someone else's uid or with extra fields", async () => {
+      const p1 = asPlayer('P1').firestore();
+      await assertFails(setDoc(doc(p1, 'pushTokens/tok-2'), token('P2')));
+      await assertFails(setDoc(doc(p1, 'pushTokens/tok-3'), { ...token('P1'), admin: true }));
+      await assertFails(setDoc(doc(anon().firestore(), 'pushTokens/tok-4'), token('P1')));
+    });
+
+    it('lets a player set only their own notification switches, as booleans', async () => {
+      const p1 = asPlayer('P1').firestore();
+      await assertSucceeds(setDoc(doc(p1, 'notificationPrefs/P1'), { reminders: false, bookIn: true }));
+      await assertSucceeds(getDoc(doc(p1, 'notificationPrefs/P1')));
+      await assertFails(getDoc(doc(asPlayer('P2').firestore(), 'notificationPrefs/P1')));
+      await assertFails(setDoc(doc(asPlayer('P2').firestore(), 'notificationPrefs/P1'), { reminders: true }));
+      await assertFails(setDoc(doc(p1, 'notificationPrefs/P1'), { reminders: 'yes' }));
+      await assertFails(setDoc(doc(p1, 'notificationPrefs/P1'), { spam: true }));
+    });
+  });
 });
