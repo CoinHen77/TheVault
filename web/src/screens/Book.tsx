@@ -5,8 +5,7 @@ import { useAuth } from '../auth/AuthProvider';
 import CapRing from '../components/heist/CapRing';
 import Door from '../components/heist/Door';
 import KeyBadge from '../components/heist/KeyBadge';
-import { ResultStamp } from '../components/heist/Seals';
-import Ticket, { TicketStat } from '../components/heist/Ticket';
+import BetTicket from '../components/heist/BetTicket';
 import { EmptyState, ErrorBanner } from '../components/ui';
 import { useVaultData } from '../hooks/VaultDataProvider';
 import { useBookBets, usePicks } from '../hooks/useWeekData';
@@ -89,32 +88,7 @@ export default function Book() {
             <ul className="grid gap-3 md:grid-cols-2">
               {bets.map((bet) => (
                 <li key={bet.id}>
-                  <Ticket
-                    eyebrow={bet.legPickIds.length === 1 ? 'Straight' : `${bet.legPickIds.length}-leg parlay`}
-                    title={<span className="font-mono">{formatOdds(bet.ticketOdds)}</span>}
-                    subtitle={bet.legPickIds.map(legName).join(' · ')}
-                    muted={bet.result === 'loss' || bet.result === 'push'}
-                    mark={<ResultStamp result={bet.result} />}
-                    footer={
-                      <div className="flex items-end justify-between gap-3">
-                        <TicketStat label="Stake" value={formatCents(bet.stakeCents)} />
-                        {bet.netCents !== null ? (
-                          <TicketStat
-                            label="Net"
-                            value={`${bet.netCents > 0 ? '+' : ''}${formatCents(bet.netCents)}`}
-                            tone={bet.netCents > 0 ? 'good' : bet.netCents < 0 ? 'bad' : 'default'}
-                            align="right"
-                          />
-                        ) : (
-                          <TicketStat
-                            label="Pays"
-                            value={bet.payoutCents !== null ? formatCents(bet.payoutCents) : '—'}
-                            align="right"
-                          />
-                        )}
-                      </div>
-                    }
-                  />
+                  <BetTicket bet={bet} legName={legName} />
                 </li>
               ))}
             </ul>
