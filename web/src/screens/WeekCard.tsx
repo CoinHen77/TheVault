@@ -95,7 +95,9 @@ export default function WeekCard() {
           </div>
         )}
         <p className="text-sm text-vault-gold-soft/60">
-          {revealed ? "The door's open. Here's everyone's ticket." : 'Every envelope opens at the same moment the door locks.'}
+          {revealed
+            ? `${COPY.vaultOpen}. Here's everyone's ticket.`
+            : 'Every envelope unseals the moment the vault opens.'}
         </p>
       </header>
 

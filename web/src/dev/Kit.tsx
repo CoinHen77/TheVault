@@ -183,7 +183,7 @@ export default function Kit() {
           {Object.entries(COPY).map(([k, v]) => (
             <div key={k} className="contents">
               <dt className="font-mono text-xs text-vault-gold-soft/50">{k}</dt>
-              <dd className="text-vault-gold-soft">{v}</dd>
+              <dd className="text-vault-gold-soft">{typeof v === 'string' ? v : Object.values(v).join(' · ')}</dd>
             </div>
           ))}
         </dl>

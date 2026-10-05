@@ -10,9 +10,9 @@ const FADE_AT = 2600;
 const DONE_AT = 3000;
 
 const COPY_BY_FRAME: Record<DoorState, [string, string]> = {
-  closed: [COPY.doorLocked, 'Every ticket is in.'],
-  opening: [COPY.doorOpening, 'Picks are locked.'],
-  open: [COPY.doorOpen, "Everyone's picks are revealed."],
+  closed: [COPY.vaultSealed, 'Every ticket is in.'],
+  opening: [COPY.vaultOpening, 'The envelopes are unsealing.'],
+  open: [COPY.vaultOpen, `Every pick is revealed. The ${COPY.bookholder} is up.`],
 };
 
 /**

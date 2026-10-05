@@ -14,14 +14,14 @@ const closeWeek = httpsCallable<{ seasonId: string; weekId: string }, unknown>(f
 const openVaultEarly = httpsCallable<{ seasonId: string; weekId: string }, void>(functions, 'openVaultEarly');
 
 const STEPS: { status: WeekStatus; label: string }[] = [
-  { status: 'open', label: 'Open' },
-  { status: 'locked', label: 'Locked' },
-  { status: 'grading', label: 'Grading' },
-  { status: 'closed', label: 'Closed' },
+  { status: 'open', label: COPY.weekStatus.open },
+  { status: 'locked', label: COPY.weekStatus.locked },
+  { status: 'grading', label: COPY.weekStatus.grading },
+  { status: 'closed', label: COPY.weekStatus.closed },
 ];
 
 /**
- * The Control room's week progress bar (CLAUDE.md H5): Open → Locked →
+ * The Control room's week progress bar (CLAUDE.md H5): Taking picks → Vault open →
  * Grading → Closed, with the next action as the one primary button.
  * SPEC.md §5 startGrading / closeWeek; §1.4's key decision once closed.
  * While open, the vault can be opened early once every paid player has a
@@ -53,7 +53,7 @@ export default function WeekLifecycleActions({
   const pickedIds = new Set((picks ?? []).map((p) => p.id));
   const sealedCount = paidIds.filter((uid) => pickedIds.has(uid)).length;
   const canOpenEarly = paidIds.length > 0 && sealedCount === paidIds.length;
-  // Locking can't be undone, so the early-open button takes a second tap.
+  // Opening the vault can't be undone, so the early-open button takes a second tap.
   const [confirmEarly, setConfirmEarly] = useState(false);
 
   async function run(action: typeof startGrading | typeof closeWeek | typeof openVaultEarly) {
@@ -82,7 +82,7 @@ export default function WeekLifecycleActions({
             <li key={step.status} className={`flex items-center ${i < STEPS.length - 1 ? 'flex-1' : ''}`}>
               <span
                 aria-current={current ? 'step' : undefined}
-                className={`flex items-center gap-1.5 whitespace-nowrap text-xs sm:text-sm ${
+                className={`flex flex-col items-center gap-1 whitespace-nowrap text-xs sm:flex-row sm:gap-1.5 sm:text-sm ${
                   done ? 'text-vault-win' : current ? 'font-medium text-vault-gold' : 'text-vault-gold-soft/45'
                 }`}
               >
@@ -115,7 +115,7 @@ export default function WeekLifecycleActions({
 
       {week.status === 'open' && (
         <p className="text-sm text-vault-gold-soft/70">
-          The door locks by itself at <span className="text-vault-gold-soft">{formatTimestampET(week.lockAt)}</span>.
+          The vault opens by itself at <span className="text-vault-gold-soft">{formatTimestampET(week.lockAt)}</span>.
           Mark buy-ins and enter any offline picks before then.
         </p>
       )}
@@ -127,7 +127,7 @@ export default function WeekLifecycleActions({
               {sealedCount} of {paidIds.length}
             </span>{' '}
             paid players have sealed a pick. Once everyone has, you can open the vault now so the {COPY.bookholder} bets
-            before the lines move. Only games after the lock time above still count.
+            before the lines move. Only games after the opening time above still count.
           </p>
           <PrimaryButton
             disabled={submitting || !canOpenEarly}
@@ -138,7 +138,7 @@ export default function WeekLifecycleActions({
               : !canOpenEarly
                 ? 'Waiting on picks to open early'
                 : confirmEarly
-                  ? 'Tap again to lock picks now'
+                  ? 'Tap again to open the vault now'
                   : COPY.openVaultEarly}
           </PrimaryButton>
           {confirmEarly && !submitting && (
@@ -156,7 +156,7 @@ export default function WeekLifecycleActions({
       {week.status === 'locked' && (
         <>
           <p className="text-sm text-vault-gold-soft/70">
-            Picks are locked and the {COPY.bookholder} can place bets. Start grading once the games are final; the Book
+            The vault is open: picks are final and the {COPY.bookholder} can place bets. Start grading once the games are final; the Book
             can&apos;t add bets after that.
           </p>
           <PrimaryButton disabled={submitting} onClick={() => void run(startGrading)}>

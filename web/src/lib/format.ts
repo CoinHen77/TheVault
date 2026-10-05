@@ -51,7 +51,7 @@ export function formatTimestampET(ts: TimestampLike): string {
 }
 
 export function formatCountdown(msRemaining: number): string {
-  if (msRemaining <= 0) return 'locked';
+  if (msRemaining <= 0) return 'opening';
   const totalSeconds = Math.floor(msRemaining / 1000);
   const days = Math.floor(totalSeconds / 86_400);
   const hours = Math.floor((totalSeconds % 86_400) / 3600);

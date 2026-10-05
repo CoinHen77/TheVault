@@ -40,10 +40,10 @@ export async function submitPickLogic(db: Firestore, params: SubmitPickParams): 
   if (!weekSnap.exists) throw new HttpsError('not-found', `Week ${weekId} not found.`);
   const week = weekSnap.data() as Week;
   if (week.status !== 'open') {
-    throw new HttpsError('failed-precondition', `Week ${weekId} is ${week.status}, not open.`);
+    throw new HttpsError('failed-precondition', `The vault for ${weekId} is already open, so picks are final.`);
   }
   if (nowMs >= week.lockAt.toMillis()) {
-    throw new HttpsError('failed-precondition', `Picks for ${weekId} are locked.`);
+    throw new HttpsError('failed-precondition', `The vault for ${weekId} is already open, so picks are final.`);
   }
 
   const buyIn = buyInSnap.data() as BuyIn | undefined;

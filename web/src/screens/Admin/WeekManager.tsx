@@ -2,6 +2,7 @@ import { httpsCallable } from 'firebase/functions';
 import { useEffect, useState } from 'react';
 import type { Player, Week, WeekType } from '@vault/shared';
 import { Card, ErrorBanner, Field, inputClass, WeekStatusPill } from '../../components/ui';
+import { COPY } from '../../lib/copy';
 import { functions } from '../../lib/firebase';
 import { formatTimestampET, weekLabel } from '../../lib/format';
 import { sortedPlayers } from '../../lib/players';
@@ -54,7 +55,7 @@ export function WeekPicker({
       >
         {(weeks ?? []).map((w) => (
           <option key={w.id} value={w.id}>
-            {weekLabel(w)} · {w.status}
+            {weekLabel(w)} · {COPY.weekStatus[w.status]}
             {w.id === currentWeekId ? ' · current' : ''}
           </option>
         ))}
@@ -155,7 +156,7 @@ export function WeekEditor({ seasonId, week }: { seasonId: string; week: Week & 
               className={inputClass}
             />
           </Field>
-          <Field label="Locks at">
+          <Field label={COPY.vaultOpensAt}>
             <input
               type="datetime-local"
               value={lockAtInput}
@@ -298,7 +299,7 @@ export function CreateNextWeek({
               className={inputClass}
             />
           </Field>
-          <Field label="Locks at">
+          <Field label={COPY.vaultOpensAt}>
             <input
               type="datetime-local"
               value={lockAtInput}

@@ -25,7 +25,7 @@ export const COPY = {
   sealPick: 'Seal it',
   resealPick: 'Reseal it',
   sealed: 'Sealed',
-  sealedNote: 'Sealed. Nobody sees it until the door locks.',
+  sealedNote: 'Sealed. Nobody sees it until the vault opens.',
   waiting: 'Waiting',
   envelopes: 'Envelopes',
   envelopesIn: 'Envelopes in',
@@ -35,11 +35,21 @@ export const COPY = {
   oddsBoardHint: 'DraftKings lines. Tap one to fill your ticket, then edit anything you like.',
   openVaultEarly: 'Open the vault early',
 
-  // Lock and reveal
-  doorLocked: 'The door is locked',
-  doorOpening: 'Opening…',
-  doorOpen: 'The door is open',
-  locksIn: 'Locks in',
+  // Week status badges, by data status
+  weekStatus: {
+    open: 'Taking picks',
+    locked: 'Vault open',
+    grading: 'Grading',
+    closed: 'Closed',
+  },
+
+  // The vault opening (Friday 4 PM, or early): picks become final, envelopes
+  // unseal and the key holder bets. Data still calls this status 'locked'.
+  vaultSealed: 'The vault is sealed',
+  vaultOpening: 'Opening…',
+  vaultOpen: 'The vault is open',
+  opensIn: 'Opens in',
+  vaultOpensAt: 'Vault opens at',
   inTheVault: 'In the vault',
   yourCut: 'Your cut',
 

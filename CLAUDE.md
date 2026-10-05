@@ -168,6 +168,7 @@ Decisions already made:
   - "Control room" = Admin
   - "Seal it" = submit pick
   - "envelopes" = hidden picks
+  - "the vault opens" = picks lock (data status `locked`); before that the vault is "sealed" and taking picks. Never say "the door locks"
   - "crew" = players
 - **Layout:** tablets and desktop (≥768px) use two columns. Phones use one column.
 - **Artwork:** the steel-and-brass vault door is cleared for use and needs no credit line. It comes in three states: closed, opening and open.

@@ -68,14 +68,16 @@ export default function Dashboard({ onNavigate }: { onNavigate: (tab: Tab) => vo
             </div>
             {isOpen ? (
               <p className="mt-1 text-xs text-vault-gold-soft/60">
-                {COPY.locksIn}{' '}
+                {COPY.opensIn}{' '}
                 <span className="font-mono text-sm text-vault-gold">
                   <Countdown lockAt={week.lockAt} />
                 </span>
               </p>
             ) : (
               <p className="mt-1 text-xs text-vault-gold-soft/60">
-                {week.status === 'grading' ? 'The door is open. Grading is underway.' : `${COPY.doorOpen}. Picks are revealed.`}
+                {week.status === 'grading'
+                  ? `${COPY.vaultOpen}. Grading is underway.`
+                  : `${COPY.vaultOpen}. Picks are revealed and the ${COPY.bookholder} is up.`}
               </p>
             )}
             <p className="mt-3 text-[11px] uppercase tracking-[0.12em] text-vault-gold-soft/60">{COPY.inTheVault}</p>
@@ -123,7 +125,7 @@ export default function Dashboard({ onNavigate }: { onNavigate: (tab: Tab) => vo
           </>
         ) : needsPick ? (
           <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-vault-gold/50 px-4 py-5 text-center">
-            <p className="text-sm text-vault-gold-soft/80">Your ticket is blank. Seal a pick before the door locks.</p>
+            <p className="text-sm text-vault-gold-soft/80">Your ticket is blank. Seal a pick before the vault opens.</p>
             <button
               type="button"
               onClick={() => onNavigate('pick')}

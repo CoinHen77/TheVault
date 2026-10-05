@@ -126,7 +126,7 @@ export default function Admin() {
             </ToolPanel>
             {week && (
               <>
-                <ToolPanel title={`Edit ${weekLabel(week)}`} hint="Buy-in and lock time">
+                <ToolPanel title={`Edit ${weekLabel(week)}`} hint="Buy-in and when the vault opens">
                   <WeekEditor seasonId={season.id} week={week} />
                 </ToolPanel>
                 <ToolPanel title={`Override the ${COPY.bookholder}`} hint="Hand the key to someone else; it's logged">

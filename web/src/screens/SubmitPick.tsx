@@ -46,9 +46,9 @@ export default function SubmitPick() {
   const now = Date.now();
   const disabledReason =
     week.status !== 'open'
-      ? `Picks for ${weekLabel(week)} are ${week.status}.`
+      ? `${COPY.vaultOpen}. Picks for ${weekLabel(week)} are final.`
       : now >= week.lockAt.toMillis()
-        ? 'Picks just locked.'
+        ? 'The vault just opened. Picks are final.'
         : !buyIn?.paid
           ? `Your ${formatCents(week.buyInCents)} buy-in isn't marked paid yet. Once the Admin marks it, you can seal a pick.`
           : null;
@@ -93,7 +93,7 @@ export default function SubmitPick() {
         </div>
         {!locked && (
           <p className="text-right text-xs text-vault-gold-soft/60">
-            {COPY.locksIn}
+            {COPY.opensIn}
             <br />
             <span className="font-mono text-sm text-vault-gold">
               <Countdown lockAt={week.lockAt} />
@@ -106,14 +106,14 @@ export default function SubmitPick() {
         <div className="flex flex-col gap-3">
           <PickTicket pick={pick} week={week} sealed={false} />
           <p className="text-center text-xs text-vault-gold-soft/60">
-            The door is locked. Your ticket can't change now.
+            {COPY.vaultOpen}. Your ticket can&apos;t change now.
           </p>
         </div>
       ) : (
         <div className="grid gap-5 md:grid-cols-2 md:items-start">
           <form className="flex flex-col gap-3" onSubmit={(e) => void handleSubmit(e)}>
             <p className="text-xs text-vault-gold-soft/60">
-              One Best Bet per week. Locks {formatTimestampET(week.lockAt)}; only games starting after lock count
+              One Best Bet per week. The vault opens {formatTimestampET(week.lockAt)}; only games starting after that count
               (honor system).
             </p>
             {disabledReason && (
@@ -186,7 +186,7 @@ export default function SubmitPick() {
               {submitting ? 'Sealing…' : pick ? COPY.resealPick : COPY.sealPick}
             </button>
             {pick && !disabledReason && (
-              <p className="text-center text-xs text-vault-gold-soft/55">You can reseal it until the door locks.</p>
+              <p className="text-center text-xs text-vault-gold-soft/55">You can reseal it until the vault opens.</p>
             )}
           </form>
 

@@ -79,7 +79,7 @@ export default function CreateSeason() {
         <Field label="Name">
           <input value={name} onChange={(e) => setName(e.target.value)} className={inputClass} />
         </Field>
-        <Field label="Week 4 lock time">
+        <Field label="Week 4: vault opens at">
           <input
             type="datetime-local"
             value={lockAtInput}

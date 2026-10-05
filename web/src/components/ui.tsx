@@ -1,5 +1,6 @@
 import type { PickResult, WeekStatus } from '@vault/shared';
 import { createContext, use, type ReactNode } from 'react';
+import { COPY } from '../lib/copy';
 
 /**
  * Shared input styling for the Control room's forms (mirrors SubmitPick/Book's
@@ -44,12 +45,7 @@ export function Stat({ label, value, tone = 'default' }: { label: string; value:
   );
 }
 
-const WEEK_STATUS_LABEL: Record<WeekStatus, string> = {
-  open: 'Open',
-  locked: 'Locked',
-  grading: 'Grading',
-  closed: 'Closed',
-};
+const WEEK_STATUS_LABEL: Record<WeekStatus, string> = COPY.weekStatus;
 
 const WEEK_STATUS_CLASS: Record<WeekStatus, string> = {
   open: 'bg-vault-win/15 text-vault-win border-vault-win/30',

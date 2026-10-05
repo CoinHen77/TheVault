@@ -60,7 +60,7 @@ export default function Book() {
       {week.status === 'open' ? (
         <div className="flex flex-col items-center gap-3 py-4 text-center">
           <Door state="closed" height={140} />
-          <p className="text-sm text-vault-gold-soft/70">The Book opens once the door locks.</p>
+          <p className="text-sm text-vault-gold-soft/70">The {COPY.bookholder} places bets once the vault opens.</p>
           <p className="text-xs text-vault-gold-soft/55">
             Then the {COPY.bookholder} can stake up to {Math.round(season.bookCapPct * 100)}% of the opening Vault on
             this week&apos;s picks.
