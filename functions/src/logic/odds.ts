@@ -5,7 +5,8 @@ import {
   ODDS_CREDITS_PER_PULL,
   ODDS_LOG_LENGTH,
   ODDS_MARKETS,
-  ODDS_SPORT_KEY,
+  ODDS_SPORT_KEYS,
+  ODDS_SPORTS,
   oddsMonthKey,
   oddsPullBlockReason,
   parseOddsApiResponse,
@@ -13,6 +14,7 @@ import {
   type OddsCallOutcome,
   type OddsFeed,
   type OddsSettings,
+  type OddsSport,
   type OddsUsageMonth,
 } from '@vault/shared';
 import { oddsFeedDoc, oddsSettingsDoc, oddsUsageDoc, weekDoc } from '../paths.js';
@@ -20,6 +22,8 @@ import { oddsFeedDoc, oddsSettingsDoc, oddsUsageDoc, weekDoc } from '../paths.js
 export interface PullOddsParams {
   apiKey: string | undefined;
   trigger: 'schedule' | 'manual';
+  /** Which league to pull; defaults to NFL. */
+  sport?: OddsSport;
   /** Injectable for tests; defaults to the real clock. */
   nowMs?: number;
   /** Injectable for tests; defaults to global fetch. Tests never hit the real API. */
@@ -56,21 +60,33 @@ function headerInt(res: Response, name: string): number | null {
   return Number.isFinite(n) ? Math.round(n) : null;
 }
 
-/** True when the active season's current week is still taking picks. */
-async function hasOpenWeek(db: Firestore): Promise<boolean> {
+/**
+ * True when the active season's current week is still taking picks. A week
+ * past its lockAt counts as closed even if lockDueWeeks hasn't run yet, so
+ * the Friday 4 PM pull doesn't spend credits on a board nobody can use.
+ */
+async function hasOpenWeek(db: Firestore, nowMs: number): Promise<boolean> {
   const seasons = await db.collection('seasons').where('status', '==', 'active').get();
   for (const season of seasons.docs) {
     const weekId = season.get('currentWeekId') as string | undefined;
     if (!weekId) continue;
     const week = await weekDoc(db, season.id, weekId).get();
-    if (week.get('status') === 'open') return true;
+    const lockAt = week.get('lockAt') as Timestamp | undefined;
+    if (week.get('status') === 'open' && (!lockAt || lockAt.toMillis() > nowMs)) return true;
   }
   return false;
 }
 
+export function parseOddsSport(value: unknown): OddsSport {
+  if (value === undefined || value === null) return 'nfl';
+  if (typeof value === 'string' && (ODDS_SPORTS as string[]).includes(value)) return value as OddsSport;
+  throw new HttpsError('invalid-argument', `sport must be one of ${ODDS_SPORTS.join(', ')}.`);
+}
+
 /**
- * Pulls DraftKings NFL lines from The Odds API into `odds/feed` and records
- * the attempt in `oddsUsage/{YYYY-MM}`.
+ * Pulls one sport's DraftKings lines from The Odds API into its feed doc
+ * (`odds/feed` for NFL, `odds/feedNcaaf` for college) and records the attempt
+ * in `oddsUsage/{YYYY-MM}`. Both sports share one monthly credit budget.
  *
  * Credits are reserved in a transaction before the request goes out, so two
  * pulls at once (schedule + "Pull now") can't both slip under the budget.
@@ -82,13 +98,14 @@ export async function pullOddsLogic(db: Firestore, params: PullOddsParams): Prom
   const monthKey = oddsMonthKey(nowMs);
   const usageRef = oddsUsageDoc(db, monthKey);
   const fetchImpl = params.fetchImpl ?? fetch;
+  const sport = params.sport ?? 'nfl';
 
   async function record(entry: Omit<OddsCallLogEntry, 'at' | 'trigger'>, patch: (u: OddsUsageMonth) => void) {
     await db.runTransaction(async (tx) => {
       const snap = await tx.get(usageRef);
       const usage = snap.exists ? (snap.data() as OddsUsageMonth) : emptyUsage(monthKey);
       patch(usage);
-      usage.log = [{ at: now, trigger: params.trigger, ...entry }, ...(usage.log ?? [])].slice(0, ODDS_LOG_LENGTH);
+      usage.log = [{ at: now, trigger: params.trigger, sport, ...entry }, ...(usage.log ?? [])].slice(0, ODDS_LOG_LENGTH);
       tx.set(usageRef, usage);
     });
     return { outcome: entry.outcome, games: entry.games, credits: entry.credits, message: entry.message };
@@ -109,7 +126,7 @@ export async function pullOddsLogic(db: Firestore, params: PullOddsParams): Prom
     });
 
   // Scheduled pulls only matter while players can still pick.
-  if (params.trigger === 'schedule' && !(await hasOpenWeek(db))) {
+  if (params.trigger === 'schedule' && !(await hasOpenWeek(db, nowMs))) {
     return skip('No week is open for picks.');
   }
 
@@ -138,7 +155,7 @@ export async function pullOddsLogic(db: Firestore, params: PullOddsParams): Prom
   });
   if (blockReason) return skip(blockReason);
 
-  const url = new URL(`https://api.the-odds-api.com/v4/sports/${ODDS_SPORT_KEY}/odds`);
+  const url = new URL(`https://api.the-odds-api.com/v4/sports/${ODDS_SPORT_KEYS[sport]}/odds`);
   url.searchParams.set('apiKey', apiKey);
   url.searchParams.set('bookmakers', ODDS_BOOKMAKER);
   url.searchParams.set('markets', ODDS_MARKETS.join(','));
@@ -192,7 +209,7 @@ export async function pullOddsLogic(db: Firestore, params: PullOddsParams): Prom
     pulledAt: now,
     games: games.map(({ commenceMs, ...game }) => ({ ...game, commenceAt: Timestamp.fromMillis(commenceMs) })),
   };
-  await oddsFeedDoc(db).set(feed);
+  await oddsFeedDoc(db, sport).set(feed);
 
   const cost = lastCost ?? ODDS_CREDITS_PER_PULL;
   await releaseReservation(cost);

@@ -1,6 +1,6 @@
 import { Timestamp, type Firestore } from 'firebase-admin/firestore';
 import { HttpsError } from 'firebase-functions/v2/https';
-import { DEFAULT_BUY_IN_CENTS, withSeasonDefaults, type BookDecision, type Season, type Week, type WeekType } from '@vault/shared';
+import { DEFAULT_BUY_IN_CENTS, nextWeekLockAtMs, withSeasonDefaults, type BookDecision, type Season, type Week, type WeekType } from '@vault/shared';
 import { seasonDoc, weekDoc } from '../paths.js';
 
 const STARTING_BOOK_DECISION: BookDecision = {
@@ -206,7 +206,7 @@ export function computeNextWeekPlan(
   current: Pick<Week, 'type' | 'nflWeek' | 'lockAt' | 'order'>,
   buyInDefaults: Record<WeekType, number>,
 ): { weekId: string; nflWeek: number | null; type: WeekType; order: number; buyInCents: number; lockAtMs: number } | null {
-  const lockAtMs = current.lockAt.toMillis() + 7 * 24 * 60 * 60 * 1000;
+  const lockAtMs = nextWeekLockAtMs(current.lockAt.toMillis());
   const order = current.order + 1;
 
   if (current.type === 'regular') {

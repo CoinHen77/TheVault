@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ODDS_MONTHLY_BUDGET, type OddsFeed, type OddsUsageMonth } from '@vault/shared';
-import { pullOddsLogic, setOddsPausedLogic } from '../src/logic/odds.js';
+import { parseOddsSport, pullOddsLogic, setOddsPausedLogic } from '../src/logic/odds.js';
 import { createSeasonLogic } from '../src/logic/season.js';
 import { oddsFeedDoc, oddsUsageDoc, weekDoc } from '../src/paths.js';
 import { clearFirestore, db } from './helpers/emulator.js';
@@ -87,6 +87,29 @@ describe('pullOddsLogic', () => {
     expect(await usage()).toMatchObject({ calls: 0, creditsUsed: 0, skipped: 1 });
   });
 
+  it('skips scheduled pulls once lockAt has passed, even before lockDueWeeks runs', async () => {
+    const lockAtMs = (await weekDoc(db, 'odds-season', 'W04').get()).get('lockAt').toMillis() as number;
+    const fetchImpl = fakeFetch(200, BODY, okHeaders);
+    const result = await pullOddsLogic(db, { apiKey: FAKE_KEY, trigger: 'schedule', nowMs: lockAtMs, fetchImpl });
+
+    expect(result.outcome).toBe('skipped');
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it('pulls college lines into their own feed doc', async () => {
+    await pullOddsLogic(db, { apiKey: FAKE_KEY, trigger: 'manual', nowMs: NOW, fetchImpl: fakeFetch(200, BODY, okHeaders) });
+    const fetchImpl = fakeFetch(200, [], okHeaders);
+    const result = await pullOddsLogic(db, { apiKey: FAKE_KEY, trigger: 'schedule', sport: 'ncaaf', nowMs: NOW, fetchImpl });
+
+    expect(result.outcome).toBe('ok');
+    expect(new URL(String(fetchImpl.mock.calls[0]![0])).pathname).toBe('/v4/sports/americanfootball_ncaaf/odds');
+    expect(((await oddsFeedDoc(db, 'ncaaf').get()).data() as OddsFeed).games).toHaveLength(0);
+    expect(((await oddsFeedDoc(db).get()).data() as OddsFeed).games).toHaveLength(1); // NFL feed untouched
+    const u = await usage();
+    expect(u.creditsUsed).toBe(6); // one shared budget
+    expect(u.log.map((e) => e.sport)).toEqual(['ncaaf', 'nfl']);
+  });
+
   it('pause stops the schedule but not "Pull now"', async () => {
     await setOddsPausedLogic(db, { paused: true });
     const fetchImpl = fakeFetch(200, BODY, okHeaders);
@@ -167,6 +190,14 @@ describe('pullOddsLogic', () => {
     ]);
     expect(await usage()).toMatchObject({ calls: 2, creditsUsed: 6 });
     expect((await usage()).log).toHaveLength(2);
+  });
+});
+
+describe('parseOddsSport', () => {
+  it('defaults to NFL and rejects unknown sports', () => {
+    expect(parseOddsSport(undefined)).toBe('nfl');
+    expect(parseOddsSport('ncaaf')).toBe('ncaaf');
+    expect(() => parseOddsSport('nba')).toThrow(/sport must be/);
   });
 });
 

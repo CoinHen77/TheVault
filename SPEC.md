@@ -23,7 +23,8 @@ A mobile-first web app for a private friend group's weekly NFL "Best Bet" pool. 
 
 - **Only players whose buy-in for that week is marked paid may submit a pick.**
 - Each paying player submits exactly **one** Best Bet: a description of the pick plus its American odds.
-- Picks lock at **11:00 AM America/New_York on Sunday** of that NFL week. Only games starting after 11:00 AM ET are eligible. Eligibility is on the honor system in v1; the text of the pick is free-form.
+- Picks lock at **4:00 PM America/New_York on Friday** of that NFL week. Only games starting at or after 4:00 PM ET Friday are eligible, so Thursday Night Football is out and Monday Night Football is in. Eligibility is on the honor system in v1; the text of the pick is free-form.
+- Once every paid player has submitted a pick, the Admin may **open the vault early**: the week locks right away, before the odds move toward the weekend. The Friday 4:00 PM eligibility cutoff still applies.
 - Picks are hidden from other players until the week locks.
 
 ### 1.2 Grading and units (The Sharp)
@@ -136,7 +137,7 @@ seasons/{seasonId}/weeks/{weekId}   // weekId e.g. "W04", "WC", "DIV", "CONF", "
   type: "regular" | "wildcard" | "divisional" | "conference" | "superbowl"
   order: number              // sort order within season
   buyInCents: number
-  lockAt: Timestamp          // default Sunday 11:00 AM ET
+  lockAt: Timestamp          // default Friday 4:00 PM ET; also the eligibility cutoff
   status: "open" | "locked" | "grading" | "closed"
   bookholderId: string
   sharePriceAtOpen: number   // price used for this week's buy-ins
@@ -208,7 +209,7 @@ seasons/{seasonId}/standings/{uid}   // maintained by functions; read-only to cl
 ## 4. Week lifecycle
 
 ```
-open ──(lockAt reached)──▶ locked ──(admin starts grading)──▶ grading ──(admin closes)──▶ closed
+open ──(lockAt reached, or Admin opens early)──▶ locked ──(admin starts grading)──▶ grading ──(admin closes)──▶ closed
 ```
 
 - **open**
@@ -244,6 +245,7 @@ All functions are callable (HTTPS onCall) unless noted. Each function checks aut
 | `submitPick` | Player | Validates the week is `open`, the buy-in is paid, now < lockAt, and the odds are valid; upserts `picks/{uid}` |
 | `adminSubmitPick` | Admin | Enters or edits a pick on a paid player's behalf. Allowed in any status except `closed`, so picks collected offline (e.g. in the group chat) can be entered after lock. Records `enteredBy` on the pick doc |
 | `lockDueWeeks` | Scheduled (every 5 min) | For weeks with `status=open` and `lockAt<=now`, sets `locked`, `openingVaultCents` = season `vaultCents`, and `bookCapCents = floor(opening × 0.25)` |
+| `openVaultEarly` | Admin | Locks an `open` week before `lockAt` with the same snapshot as `lockDueWeeks`. Fails unless at least one buy-in is paid and every paid player has a pick. Leaves `lockAt` unchanged |
 | `placeBookBet` | Bookholder | Validates the week is `locked`, every leg is a pick in this week, stake > 0, and the sum of stakes ≤ `bookCapCents`; records the ticket odds and default payout |
 | `updateBookBet` / `deleteBookBet` | Bookholder or Admin | Allowed only while the week is `locked` |
 | `startGrading` | Admin | `locked` → `grading` |

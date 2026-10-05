@@ -4,6 +4,7 @@
  * either the production app or an emulator-backed instance in tests.
  */
 import type { Firestore } from 'firebase-admin/firestore';
+import { ODDS_FEED_DOC_IDS, type OddsSport } from '@vault/shared';
 
 export function playerDoc(db: Firestore, uid: string) {
   return db.collection('players').doc(uid);
@@ -71,8 +72,8 @@ export function preloadDoc(db: Firestore, seasonId: string, uid: string) {
 }
 
 /** The latest DraftKings lines from The Odds API (see @vault/shared oddsFeed). */
-export function oddsFeedDoc(db: Firestore) {
-  return db.collection('odds').doc('feed');
+export function oddsFeedDoc(db: Firestore, sport: OddsSport = 'nfl') {
+  return db.collection('odds').doc(ODDS_FEED_DOC_IDS[sport]);
 }
 
 export function oddsSettingsDoc(db: Firestore) {

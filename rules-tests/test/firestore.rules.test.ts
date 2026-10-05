@@ -363,6 +363,7 @@ describe('firestore.rules', () => {
       await testEnv.withSecurityRulesDisabled(async (ctx) => {
         const db = ctx.firestore();
         await setDoc(doc(db, 'odds/feed'), { games: [], pulledAt: Timestamp.now(), bookmaker: 'draftkings' });
+        await setDoc(doc(db, 'odds/feedNcaaf'), { games: [], pulledAt: Timestamp.now(), bookmaker: 'draftkings' });
         await setDoc(doc(db, 'odds/settings'), { paused: false });
         await setDoc(doc(db, 'oddsUsage/2026-10'), { monthKey: '2026-10', calls: 1, creditsUsed: 3 });
       });
@@ -371,6 +372,8 @@ describe('firestore.rules', () => {
     it('lets any signed-in player read the feed, but not anonymous users', async () => {
       await assertSucceeds(getDoc(doc(asPlayer('P1').firestore(), 'odds/feed')));
       await assertFails(getDoc(doc(anon().firestore(), 'odds/feed')));
+      await assertSucceeds(getDoc(doc(asPlayer('P1').firestore(), 'odds/feedNcaaf')));
+      await assertFails(getDoc(doc(anon().firestore(), 'odds/feedNcaaf')));
     });
 
     it('keeps usage and settings Admin-only', async () => {
@@ -389,6 +392,7 @@ describe('firestore.rules', () => {
       await assertFails(updateDoc(doc(admin, 'odds/settings'), { paused: true }));
       await assertFails(updateDoc(doc(admin, 'oddsUsage/2026-10'), { creditsUsed: 0 }));
       await assertFails(setDoc(doc(asPlayer('P1').firestore(), 'odds/feed'), { games: [] }));
+      await assertFails(setDoc(doc(admin, 'odds/feedNcaaf'), { games: [] }));
     });
   });
 });

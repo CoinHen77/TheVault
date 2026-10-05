@@ -220,7 +220,17 @@ async function seedOddsFeed() {
       game('seed-5', 'Seattle Seahawks', 'San Francisco 49ers', 33.25, 3.5, 43.5),
     ],
   });
-  console.log('Seeded a fake odds/feed with 5 games.');
+  // College names don't shorten to codes, so these exercise the long-name layout.
+  await db.collection('odds').doc('feedNcaaf').set({
+    bookmaker: 'draftkings',
+    pulledAt: Timestamp.now(),
+    games: [
+      game('seed-cfb-1', 'Alabama Crimson Tide', 'Georgia Bulldogs', 3, 3.5, 52.5),
+      game('seed-cfb-2', 'Ohio State Buckeyes', 'Michigan Wolverines', 20, -7, 44.5),
+      game('seed-cfb-3', 'Arizona State Sun Devils', 'North Carolina Tar Heels', 24, 2.5, 57),
+    ],
+  });
+  console.log('Seeded a fake odds/feed with 5 games and odds/feedNcaaf with 3.');
 }
 
 await seedPlayersAndInvites();

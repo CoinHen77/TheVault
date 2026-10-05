@@ -2,13 +2,17 @@ import { httpsCallable } from 'firebase/functions';
 import { useState } from 'react';
 import {
   ODDS_CREDITS_PER_PULL,
+  ODDS_FEED_DOC_IDS,
   ODDS_FREE_TIER_CREDITS,
   ODDS_MIN_REMAINING,
   ODDS_MONTHLY_BUDGET,
+  ODDS_SPORT_LABELS,
+  ODDS_SPORTS,
   ODDS_WORST_CASE_MONTH_CREDITS,
   oddsMonthKey,
   type OddsFeed,
   type OddsSettings,
+  type OddsSport,
   type OddsUsageMonth,
 } from '@vault/shared';
 import { Card, ErrorBanner, Stat } from '../../components/ui';
@@ -17,7 +21,7 @@ import { useDocData } from '../../hooks/useDocData';
 import { functions } from '../../lib/firebase';
 import { formatTimestampET } from '../../lib/format';
 
-const pullOddsNow = httpsCallable<void, { outcome: string; games: number; credits: number; message: string | null }>(
+const pullOddsNow = httpsCallable<{ sport: OddsSport }, { outcome: string; games: number; credits: number; message: string | null }>(
   functions,
   'pullOddsNow',
 );
@@ -40,10 +44,12 @@ export default function OddsMonitor() {
   const monthKey = oddsMonthKey(Date.now());
   const { data: usage } = useDocData<OddsUsageMonth>(`oddsUsage/${monthKey}`);
   const { data: settings } = useDocData<OddsSettings>('odds/settings');
-  const { data: feed } = useDocData<OddsFeed>('odds/feed');
+  const { data: nflFeed } = useDocData<OddsFeed>(`odds/${ODDS_FEED_DOC_IDS.nfl}`);
+  const { data: ncaafFeed } = useDocData<OddsFeed>(`odds/${ODDS_FEED_DOC_IDS.ncaaf}`);
+  const feeds: Record<OddsSport, OddsFeed | null | undefined> = { nfl: nflFeed, ncaaf: ncaafFeed };
   const { data: months } = useCollectionData<OddsUsageMonth>('oddsUsage');
 
-  const [busy, setBusy] = useState<'pull' | 'pause' | null>(null);
+  const [busy, setBusy] = useState<OddsSport | 'pause' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
 
@@ -54,7 +60,7 @@ export default function OddsMonitor() {
   const barTone = used >= ODDS_MONTHLY_BUDGET ? 'bg-vault-loss' : used >= ODDS_MONTHLY_BUDGET * 0.8 ? 'bg-amber-400' : 'bg-vault-win';
   const pastMonths = (months ?? []).filter((m) => m.id !== monthKey).sort((a, b) => b.id.localeCompare(a.id)).slice(0, 6);
 
-  async function run(kind: 'pull' | 'pause', action: () => Promise<string | null>) {
+  async function run(kind: OddsSport | 'pause', action: () => Promise<string | null>) {
     setBusy(kind);
     setError(null);
     setNote(null);
@@ -101,29 +107,38 @@ export default function OddsMonitor() {
 
         <div className="flex flex-col gap-1 text-xs text-vault-gold-soft/60">
           <p>
-            Schedule: every 4 hours, Tue–Fri ET, only while a week is open.{' '}
+            Schedule, Tue–Fri ET while a week is open: NFL every 4 hours, college once a day at 10 AM.{' '}
             {paused ? <span className="text-amber-400">Paused.</span> : <span className="text-vault-win">Running.</span>}
           </p>
-          <p>
-            Last pull: {feed ? `${formatTimestampET(feed.pulledAt)} · ${feed.games.length} games` : 'never'}
-          </p>
+          {ODDS_SPORTS.map((sport) => {
+            const feed = feeds[sport];
+            return (
+              <p key={sport}>
+                Last {ODDS_SPORT_LABELS[sport]} pull:{' '}
+                {feed ? `${formatTimestampET(feed.pulledAt)} · ${feed.games.length} games` : 'never'}
+              </p>
+            );
+          })}
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            disabled={busy !== null}
-            onClick={() =>
-              void run('pull', async () => {
-                const { data } = await pullOddsNow();
-                if (data.outcome === 'ok') return `Pulled ${data.games} games for ${data.credits} credits.`;
-                return `${data.outcome === 'skipped' ? 'Skipped' : 'Failed'}: ${data.message ?? ''}`;
-              })
-            }
-            className="min-h-11 rounded-lg bg-vault-gold px-4 text-sm font-semibold text-vault-black transition hover:bg-vault-gold-soft disabled:opacity-40"
-          >
-            {busy === 'pull' ? 'Pulling…' : `Pull now (${ODDS_CREDITS_PER_PULL} credits)`}
-          </button>
+          {ODDS_SPORTS.map((sport) => (
+            <button
+              key={sport}
+              type="button"
+              disabled={busy !== null}
+              onClick={() =>
+                void run(sport, async () => {
+                  const { data } = await pullOddsNow({ sport });
+                  if (data.outcome === 'ok') return `Pulled ${data.games} ${ODDS_SPORT_LABELS[sport]} games for ${data.credits} credits.`;
+                  return `${data.outcome === 'skipped' ? 'Skipped' : 'Failed'}: ${data.message ?? ''}`;
+                })
+              }
+              className="min-h-11 rounded-lg bg-vault-gold px-4 text-sm font-semibold text-vault-black transition hover:bg-vault-gold-soft disabled:opacity-40"
+            >
+              {busy === sport ? 'Pulling…' : `Pull ${ODDS_SPORT_LABELS[sport]} (${ODDS_CREDITS_PER_PULL} cr)`}
+            </button>
+          ))}
           <button
             type="button"
             disabled={busy !== null}
@@ -148,7 +163,8 @@ export default function OddsMonitor() {
               {usage.log.map((entry, i) => (
                 <li key={i} className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 py-1.5">
                   <span className="text-vault-gold-soft/70">
-                    {formatTimestampET(entry.at)} · {entry.trigger === 'manual' ? 'Pull now' : 'Schedule'}
+                    {formatTimestampET(entry.at)} · {ODDS_SPORT_LABELS[entry.sport ?? 'nfl']} ·{' '}
+                    {entry.trigger === 'manual' ? 'Pull now' : 'Schedule'}
                   </span>
                   <span
                     className={

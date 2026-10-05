@@ -13,7 +13,7 @@ import { defineSecret } from 'firebase-functions/params';
 import { setGlobalOptions } from 'firebase-functions/v2';
 import { onCall } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
-import { ODDS_PULL_SCHEDULE, ODDS_PULL_TIMEZONE, SHARED_VERSION } from '@vault/shared';
+import { ODDS_PULL_SCHEDULES, ODDS_PULL_TIMEZONE, SHARED_VERSION, type OddsSport } from '@vault/shared';
 
 import { rejectUninvitedUsers } from './auth.js';
 import { isAdminRequest, requireAdmin, requireUid } from './context.js';
@@ -24,8 +24,8 @@ import {
   placeBookBetLogic,
   updateBookBetLogic,
 } from './logic/bookBets.js';
-import { lockDueWeeksLogic } from './logic/lock.js';
-import { pullOddsLogic, setOddsPausedLogic } from './logic/odds.js';
+import { lockDueWeeksLogic, openVaultEarlyLogic } from './logic/lock.js';
+import { parseOddsSport, pullOddsLogic, setOddsPausedLogic } from './logic/odds.js';
 import { adminSubmitPickLogic, gradePickLogic, submitPickLogic } from './logic/picks.js';
 import { markPreloadPaidLogic, unmarkPreloadLogic } from './logic/preload.js';
 import {
@@ -175,6 +175,12 @@ export const lockDueWeeks = onSchedule('every 5 minutes', async () => {
   await lockDueWeeksLogic(db());
 });
 
+/** Admin: lock the current week before lockAt once every paid player has a pick. */
+export const openVaultEarly = onCall((request) => {
+  requireAdmin(request);
+  return openVaultEarlyLogic(db(), request.data);
+});
+
 /**
  * The Odds API key lives in Google Cloud Secret Manager. Zach sets it himself
  * (never through a command Claude runs); the value never touches the repo or
@@ -183,27 +189,33 @@ export const lockDueWeeks = onSchedule('every 5 minutes', async () => {
 const oddsApiKey = defineSecret('ODDS_API_KEY');
 
 /**
- * DraftKings lines every 4 hours, Tuesday–Friday ET, while a week is open.
- * No retries: a failed pull waits for the next slot rather than spending
- * more credits.
+ * DraftKings lines Tuesday–Friday ET while a week is open: NFL every 4 hours,
+ * college once a day (see ODDS_PULL_SCHEDULES). No retries: a failed pull
+ * waits for the next slot rather than spending more credits.
  */
-export const pullOdds = onSchedule(
-  {
-    schedule: ODDS_PULL_SCHEDULE,
-    timeZone: ODDS_PULL_TIMEZONE,
-    secrets: [oddsApiKey],
-    retryCount: 0,
-    maxInstances: 1,
-  },
-  async () => {
-    await pullOddsLogic(db(), { apiKey: oddsApiKey.value(), trigger: 'schedule' });
-  },
-);
+function scheduledPull(sport: OddsSport) {
+  return onSchedule(
+    {
+      schedule: ODDS_PULL_SCHEDULES[sport],
+      timeZone: ODDS_PULL_TIMEZONE,
+      secrets: [oddsApiKey],
+      retryCount: 0,
+      maxInstances: 1,
+    },
+    async () => {
+      await pullOddsLogic(db(), { apiKey: oddsApiKey.value(), trigger: 'schedule', sport });
+    },
+  );
+}
+
+export const pullOdds = scheduledPull('nfl');
+export const pullCollegeOdds = scheduledPull('ncaaf');
 
 /** Control room "Pull now". Same credit guards as the schedule. */
 export const pullOddsNow = onCall({ secrets: [oddsApiKey], maxInstances: 1 }, (request) => {
   requireAdmin(request);
-  return pullOddsLogic(db(), { apiKey: oddsApiKey.value(), trigger: 'manual' });
+  const sport = parseOddsSport((request.data as { sport?: unknown } | null)?.sport);
+  return pullOddsLogic(db(), { apiKey: oddsApiKey.value(), trigger: 'manual', sport });
 });
 
 export const setOddsPaused = onCall((request) => {

@@ -126,6 +126,13 @@ describe('pick text', () => {
     expect(oddsPickText(game, 'over', { odds: -108, point: 47.5 })).toBe('Over 47.5');
     expect(oddsPickText(game, 'under', { odds: -112, point: 47.5 })).toBe('Under 47.5');
   });
+
+  it('keeps college team names whole', () => {
+    const cfb = { homeTeam: 'Georgia Bulldogs', awayTeam: 'Alabama Crimson Tide' };
+    expect(oddsGameText(cfb)).toBe('Alabama Crimson Tide @ Georgia Bulldogs');
+    expect(oddsPickText(cfb, 'spreadAway', { odds: -110, point: -3.5 })).toBe('Alabama Crimson Tide -3.5');
+    expect(oddsPickText(cfb, 'mlHome', { odds: 140, point: null })).toBe('Georgia Bulldogs ML');
+  });
 });
 
 describe('oddsMonthKey', () => {
@@ -162,27 +169,31 @@ describe('oddsPullBlockReason', () => {
   });
 
   it('keeps the worst-case schedule inside the budget', () => {
-    expect(ODDS_WORST_CASE_MONTH_CREDITS).toBe(342);
+    expect(ODDS_WORST_CASE_MONTH_CREDITS).toBe(399);
     expect(ODDS_WORST_CASE_MONTH_CREDITS).toBeLessThan(ODDS_MONTHLY_BUDGET);
     expect(ODDS_MONTHLY_BUDGET).toBeLessThan(ODDS_FREE_TIER_CREDITS);
   });
 });
 
 describe('eligibleOddsGames', () => {
-  const lockAt = Date.parse('2026-10-11T15:00:00Z'); // Sun 11:00 AM ET
+  const lockAt = Date.parse('2026-10-09T20:00:00Z'); // Fri 4:00 PM ET
   const at = (iso: string) => ({ id: iso, commenceMs: Date.parse(iso) });
 
-  it('keeps Sunday-after-lock and Monday games, drops Thursday and next week', () => {
+  it('keeps Friday-after-lock through Monday night, drops Thursday and next week', () => {
     const games = [
-      at('2026-10-09T00:15:00Z'), // Thu night
+      at('2026-10-09T00:15:00Z'), // Thu night (TNF)
+      at('2026-10-09T19:59:00Z'), // a minute before lock
+      at('2026-10-09T20:00:00Z'), // exactly at lock
+      at('2026-10-09T23:30:00Z'), // Fri 7:30 PM college
       at('2026-10-11T13:30:00Z'), // Sun 9:30 AM ET (London)
-      at('2026-10-11T15:00:00Z'), // exactly at lock
       at('2026-10-11T17:00:00Z'), // Sun 1 PM
       at('2026-10-13T00:15:00Z'), // Mon night
       at('2026-10-16T00:15:00Z'), // next Thu
     ];
     expect(eligibleOddsGames(games, lockAt).map((g) => g.id)).toEqual([
-      '2026-10-11T15:00:00Z',
+      '2026-10-09T20:00:00Z',
+      '2026-10-09T23:30:00Z',
+      '2026-10-11T13:30:00Z',
       '2026-10-11T17:00:00Z',
       '2026-10-13T00:15:00Z',
     ]);

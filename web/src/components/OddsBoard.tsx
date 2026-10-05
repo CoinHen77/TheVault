@@ -1,5 +1,8 @@
 import { useMemo, useState } from 'react';
 import {
+  ODDS_FEED_DOC_IDS,
+  ODDS_SPORT_LABELS,
+  ODDS_SPORTS,
   eligibleOddsGames,
   formatSpreadPoint,
   oddsGameText,
@@ -8,6 +11,7 @@ import {
   type OddsChoice,
   type OddsFeed,
   type OddsGame,
+  type OddsSport,
 } from '@vault/shared';
 import { useDocData } from '../hooks/useDocData';
 import { COPY } from '../lib/copy';
@@ -19,11 +23,23 @@ export interface OddsBoardSelection {
   americanOdds: number;
 }
 
+/** This week's eligible games (kickoff at or after lock) from one sport's feed. */
+function useEligibleGames(sport: OddsSport, lockAtMs: number) {
+  const { data: feed } = useDocData<OddsFeed>(`odds/${ODDS_FEED_DOC_IDS[sport]}`);
+  const games = useMemo(() => {
+    if (!feed) return [];
+    const withMs = feed.games.map((g) => ({ ...g, commenceMs: g.commenceAt.toMillis() }));
+    return eligibleOddsGames(withMs, lockAtMs);
+  }, [feed, lockAtMs]);
+  return { feed, games };
+}
+
 /**
- * DraftKings lines for this week's eligible games (kickoff at or after lock),
- * from `odds/feed`. Tapping a line fills the pick form; the form stays
- * editable, so props and lines the board doesn't carry still work. Renders
- * nothing when there's no feed or no eligible games.
+ * DraftKings lines for this week's eligible games, with an NFL / College
+ * toggle (`odds/feed` and `odds/feedNcaaf`). Tapping a line fills the pick
+ * form; the form stays editable, so props and lines the board doesn't carry
+ * still work. The toggle only shows when both sports have games, and the
+ * board renders nothing when neither does.
  */
 export default function OddsBoard({
   lockAtMs,
@@ -34,17 +50,19 @@ export default function OddsBoard({
   disabled: boolean;
   onSelect: (selection: OddsBoardSelection) => void;
 }) {
-  const { data: feed } = useDocData<OddsFeed>('odds/feed');
+  const boards: Record<OddsSport, ReturnType<typeof useEligibleGames>> = {
+    nfl: useEligibleGames('nfl', lockAtMs),
+    ncaaf: useEligibleGames('ncaaf', lockAtMs),
+  };
+  const available = ODDS_SPORTS.filter((s) => boards[s].games.length > 0);
+  const [chosenSport, setChosenSport] = useState<OddsSport>('nfl');
   const [openId, setOpenId] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
 
-  const games = useMemo(() => {
-    if (!feed) return [];
-    const withMs = feed.games.map((g) => ({ ...g, commenceMs: g.commenceAt.toMillis() }));
-    return eligibleOddsGames(withMs, lockAtMs);
-  }, [feed, lockAtMs]);
-
-  if (!feed || games.length === 0) return null;
+  const sport = available.includes(chosenSport) ? chosenSport : available[0];
+  if (!sport) return null;
+  const { feed, games } = boards[sport];
+  if (!feed) return null;
 
   function choose(game: OddsGame, choice: OddsChoice) {
     const line = game.lines[choice];
@@ -59,6 +77,26 @@ export default function OddsBoard({
         <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-vault-gold-soft/60">{COPY.oddsBoard}</p>
         <p className="text-[11px] text-vault-gold-soft/45">Updated {formatTimestampET(feed.pulledAt)}</p>
       </div>
+      {available.length > 1 && (
+        <div role="group" aria-label="League" className="grid grid-cols-2 gap-1 rounded-lg border border-vault-line p-1">
+          {available.map((s) => (
+            <button
+              key={s}
+              type="button"
+              aria-pressed={s === sport}
+              onClick={() => {
+                setChosenSport(s);
+                setOpenId(null);
+              }}
+              className={`min-h-11 rounded-md text-sm transition ${
+                s === sport ? 'bg-vault-gold/15 font-semibold text-vault-gold' : 'text-vault-gold-soft/70 hover:text-vault-gold-soft'
+              }`}
+            >
+              {ODDS_SPORT_LABELS[s]}
+            </button>
+          ))}
+        </div>
+      )}
       <p className="text-xs text-vault-gold-soft/60">{COPY.oddsBoardHint}</p>
 
       <ul className="flex flex-col gap-1.5">

@@ -1,4 +1,4 @@
-import type { Week, WeekType } from '@vault/shared';
+import { nextWeekLockAtMs, type Week, type WeekType } from '@vault/shared';
 
 export { DEFAULT_BUY_IN_CENTS } from '@vault/shared';
 
@@ -24,7 +24,7 @@ export function suggestNextWeek(
   buyInCents: number;
   lockAtMs: number;
 } {
-  const lockAtMs = current.lockAt.toMillis() + 7 * 24 * 60 * 60 * 1000;
+  const lockAtMs = nextWeekLockAtMs(current.lockAt.toMillis());
   const order = current.order + 1;
 
   if (current.type === 'regular') {

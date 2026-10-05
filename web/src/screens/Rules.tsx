@@ -54,8 +54,9 @@ export default function Rules() {
 
         <Step n="02" title="Seal one Best Bet">
           One pick per week: what you&apos;re betting plus American odds (a whole number, −100 or lower, or +100 or
-          higher). The door locks at 11:00 AM ET on Sunday, and only games starting after that count (honor system).
-          Nobody sees your pick until lock.
+          higher). The door locks at 4:00 PM ET on Friday, and only games starting after that count, so Thursday night
+          is out (honor system). If every paid player has sealed a pick, the Admin can open the vault early;
+          the Friday 4:00 PM cutoff still applies. Nobody sees your pick until lock.
         </Step>
 
         <Step n="03" title={`The ${COPY.bookholder} runs the Book`}>

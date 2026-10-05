@@ -65,10 +65,15 @@ service cloud.firestore {
       allow update: if false;
     }
 
-    // odds/feed — DraftKings lines from The Odds API, written only by the
-    // pullOdds functions. odds/settings (the Admin's pause switch) is changed
-    // through setOddsPaused.
+    // odds/feed (NFL) and odds/feedNcaaf (college) — DraftKings lines from
+    // The Odds API, written only by the pullOdds functions. odds/settings
+    // (the Admin's pause switch) is changed through setOddsPaused.
     match /odds/feed {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    match /odds/feedNcaaf {
       allow read: if isSignedIn();
       allow write: if false;
     }

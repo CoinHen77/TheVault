@@ -43,7 +43,7 @@ function prefersReducedMotion(): boolean {
 /**
  * The lock moment (CLAUDE.md H4). Plays once per week per device: the first
  * time this device sees the current week locked (or grading), whether that's
- * live at 11:00 AM or on the next visit. The "seen" flag is written before the
+ * live at lock (Friday 4:00 PM, or earlier if the Admin opens the vault early) or on the next visit. The "seen" flag is written before the
  * animation starts, so a reload mid-animation doesn't replay it.
  */
 export function LockRevealProvider({ children }: { children: ReactNode }) {

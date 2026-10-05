@@ -33,6 +33,7 @@ export const COPY = {
   // Odds board (The Odds API)
   oddsBoard: 'The board',
   oddsBoardHint: 'DraftKings lines. Tap one to fill your ticket, then edit anything you like.',
+  openVaultEarly: 'Open the vault early',
 
   // Lock and reveal
   doorLocked: 'The door is locked',

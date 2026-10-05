@@ -1,10 +1,11 @@
 /**
  * The Odds API feed (SPEC.md §8 Phase 3 "odds lookup", added on request).
  *
- * DraftKings spread, moneyline and total for NFL games, pulled by a scheduled
- * function every 4 hours Tuesday–Friday ET. The free tier is 500 credits a
- * month and each pull costs 1 credit per market (3 here), so the worst month
- * (19 Tue–Fri days × 6 pulls × 3) is 342 credits. The guards below stop pulls
+ * DraftKings spread, moneyline and total for NFL and college games, pulled by
+ * scheduled functions Tuesday–Friday ET: NFL every 4 hours, college once a
+ * day. The free tier is 500 credits a month and each pull costs 1 credit per
+ * market (3 here) whatever the number of games, so the worst month
+ * (19 Tue–Fri days × 7 pulls × 3) is 399 credits. The guards below stop pulls
  * well before the limit in case something misfires.
  *
  * The feed only pre-fills the pick form — picks stay free-form text plus odds.
@@ -12,7 +13,15 @@
 import { isValidAmericanOdds } from './odds.js';
 import type { TimestampLike } from './types.js';
 
-export const ODDS_SPORT_KEY = 'americanfootball_nfl';
+export type OddsSport = 'nfl' | 'ncaaf';
+export const ODDS_SPORTS: OddsSport[] = ['nfl', 'ncaaf'];
+export const ODDS_SPORT_KEYS: Record<OddsSport, string> = {
+  nfl: 'americanfootball_nfl',
+  ncaaf: 'americanfootball_ncaaf',
+};
+export const ODDS_SPORT_LABELS: Record<OddsSport, string> = { nfl: 'NFL', ncaaf: 'College' };
+/** Each sport's feed lives at `odds/{id}`; NFL keeps the original `odds/feed`. */
+export const ODDS_FEED_DOC_IDS: Record<OddsSport, string> = { nfl: 'feed', ncaaf: 'feedNcaaf' };
 export const ODDS_BOOKMAKER = 'draftkings';
 export const ODDS_MARKETS = ['h2h', 'spreads', 'totals'] as const;
 
@@ -24,11 +33,17 @@ export const ODDS_FREE_TIER_CREDITS = 500;
 export const ODDS_MONTHLY_BUDGET = 450;
 /** Pulls stop once the API itself reports fewer credits left than this. */
 export const ODDS_MIN_REMAINING = 50;
-/** The schedule's ceiling: 19 Tue–Fri days (the most a month can have) × 6 pulls. */
-export const ODDS_WORST_CASE_MONTH_CREDITS = 19 * 6 * ODDS_CREDITS_PER_PULL;
+/** Cron for each sport's scheduled pull, Tuesday–Friday ET. */
+export const ODDS_PULL_SCHEDULES: Record<OddsSport, string> = {
+  nfl: '0 0,4,8,12,16,20 * * 2-5', // every 4 hours
+  ncaaf: '0 10 * * 2-5', // once a day, so both sports fit the free tier
+};
+/** Scheduled pulls per Tue–Fri day; must match ODDS_PULL_SCHEDULES. */
+export const ODDS_PULLS_PER_DAY: Record<OddsSport, number> = { nfl: 6, ncaaf: 1 };
+/** The schedule's ceiling: 19 Tue–Fri days (the most a month can have) × every sport's pulls. */
+export const ODDS_WORST_CASE_MONTH_CREDITS =
+  19 * (ODDS_PULLS_PER_DAY.nfl + ODDS_PULLS_PER_DAY.ncaaf) * ODDS_CREDITS_PER_PULL;
 
-/** Cron for the scheduled pull: 00, 04, 08, 12, 16, 20 ET, Tuesday–Friday. */
-export const ODDS_PULL_SCHEDULE = '0 0,4,8,12,16,20 * * 2-5';
 export const ODDS_PULL_TIMEZONE = 'America/New_York';
 
 export type OddsChoice = 'spreadAway' | 'spreadHome' | 'mlAway' | 'mlHome' | 'over' | 'under';
@@ -72,6 +87,8 @@ export type OddsCallOutcome = 'ok' | 'error' | 'skipped';
 export interface OddsCallLogEntry {
   at: TimestampLike;
   trigger: 'schedule' | 'manual';
+  /** Missing on entries from before college odds were added (all NFL). */
+  sport?: OddsSport;
   outcome: OddsCallOutcome;
   /** Credits this call cost, from the API's x-requests-last header. */
   credits: number;
@@ -230,8 +247,12 @@ export function teamCode(name: string): string {
   return NFL_TEAM_CODES[name] ?? name;
 }
 
-/** "Bears" for "Chicago Bears" (every NFL nickname is the last word). */
+/**
+ * "Bears" for "Chicago Bears" (every NFL nickname is the last word). College
+ * names ("Alabama Crimson Tide") don't split cleanly, so they stay whole.
+ */
 export function teamNickname(name: string): string {
+  if (!(name in NFL_TEAM_CODES)) return name;
   return name.trim().split(/\s+/).pop() ?? name;
 }
 
@@ -264,13 +285,13 @@ export function oddsPickText(game: Pick<OddsGameBase, 'homeTeam' | 'awayTeam'>, 
   }
 }
 
-const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
+const FOUR_DAYS_MS = 4 * 24 * 60 * 60 * 1000;
 
 /**
  * Games eligible for a week's picks: kicking off at or after lock (SPEC.md
- * §1.1 — only games after 11:00 AM ET Sunday count) and within three days of
- * it, which covers Sunday and Monday night but not next week's slate.
+ * §1.1 — only games after Friday 4:00 PM ET count) and within four days of
+ * it, which runs through Monday night but stops before next Thursday.
  */
 export function eligibleOddsGames<G extends { commenceMs: number }>(games: G[], lockAtMs: number): G[] {
-  return games.filter((g) => g.commenceMs >= lockAtMs && g.commenceMs < lockAtMs + THREE_DAYS_MS);
+  return games.filter((g) => g.commenceMs >= lockAtMs && g.commenceMs < lockAtMs + FOUR_DAYS_MS);
 }

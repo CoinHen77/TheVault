@@ -16,3 +16,4 @@ export * from './shares.js';
 export * from './book.js';
 export * from './bookholder.js';
 export * from './oddsFeed.js';
+export * from './lockTime.js';
