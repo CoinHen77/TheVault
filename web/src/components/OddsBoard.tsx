@@ -12,6 +12,7 @@ import {
   type OddsFeed,
   type OddsGame,
   type OddsSport,
+  type PickLine,
 } from '@vault/shared';
 import { useDocData } from '../hooks/useDocData';
 import { COPY } from '../lib/copy';
@@ -21,6 +22,8 @@ export interface OddsBoardSelection {
   gameText: string;
   pickText: string;
   americanOdds: number;
+  /** Sealed with the pick so the app can tell the player if this line moves. */
+  line: PickLine;
 }
 
 /** This week's eligible games (kickoff at or after lock) from one sport's feed. */
@@ -68,7 +71,12 @@ export default function OddsBoard({
     const line = game.lines[choice];
     if (!line) return;
     setSelected(`${game.eventId}:${choice}`);
-    onSelect({ gameText: oddsGameText(game), pickText: oddsPickText(game, choice, line), americanOdds: line.odds });
+    onSelect({
+      gameText: oddsGameText(game),
+      pickText: oddsPickText(game, choice, line),
+      americanOdds: line.odds,
+      line: { sport: sport!, eventId: game.eventId, choice, point: line.point },
+    });
   }
 
   return (

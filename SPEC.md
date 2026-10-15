@@ -47,6 +47,12 @@ A mobile-first web app for a private friend group's weekly NFL "Best Bet" pool. 
 - The app **records** the actual ticket odds and stake entered by the Bookholder. It does **not** compute parlay odds.
   - Default payout on a win is `stake × decimal(ticketOdds)`.
   - The Bookholder or Admin may override the payout with the exact amount from the ticket.
+- **Line moves** (added 2026-10-15). Picks sealed from the odds board remember their DraftKings line. Each odds pull compares it with the current line:
+  - While the vault is sealed, a player whose line moved gets one push per seal (any change in the spread or total, or a price move of 5 cents or more, e.g. −110 → −115), so they can reseal, pick something else, or keep it.
+  - One extra pull runs as the vault opens, for each sport the picks came from. Every board pick is then **re-priced to the DraftKings line at vault open**, including a moved spread or total (sealed Bears −2.5 −110 becomes Bears −3 −115). `pickText`, `americanOdds` and `line.point` are overwritten; the original goes in `sealed`.
+  - **Units and the Book decision (§1.4) use the vault-open odds.** If the vault-open pull fails or is skipped, the last scheduled pull's price is used; a pick with no price since it was sealed keeps its sealed odds.
+  - Picks typed in by hand (props, anything not on the board) can't be priced from the feed. While the vault is open, the Admin sets their vault-open line by hand on the Book screen (`adjustPickAtOpen`); units and the Book decision use it. Until then they keep their sealed odds.
+  - The Bookholder's bet builder shows each leg's odds next to the latest DraftKings price, so they can decide whether a leg is still worth betting.
 - Settlement of a book bet:
   - **Win:** the Vault receives payout minus stake as net profit.
   - **Loss:** the Vault loses the stake.
@@ -175,6 +181,14 @@ seasons/{seasonId}/weeks/{weekId}/picks/{uid}   // doc id = uid → one pick per
   updatedAt: Timestamp
   result: "pending" | "win" | "loss" | "push"
   units: number | null       // set at grading
+  enteredBy?: string         // set by adminSubmitPick
+  line?: { sport: "nfl" | "ncaaf", eventId: string, choice: string, point: number | null }
+                             // odds-board line it was sealed from; missing if typed in by hand
+  lineNow?: { odds: number, point: number | null, pickText: string, checkedAt: Timestamp }  // latest DraftKings price (server-only)
+  lineAlertedAt?: Timestamp  // line-move push already sent for this seal (server-only)
+  sealed?: { pickText: string, americanOdds: number, point: number | null }  // original seal, kept when re-priced at vault open
+  pricedAtOpenAt?: Timestamp // when the vault-open price was applied (server-only)
+  priceAdjustedBy?: string   // Admin who set the vault-open line by hand (server-only)
 
 seasons/{seasonId}/weeks/{weekId}/bookBets/{betId}
   legPickIds: string[]       // uids of pick docs used
@@ -202,6 +216,7 @@ pushTokens/{token}            // one per device with push notifications on
 
 notificationPrefs/{uid}       // written by the player; a missing field means on
   reminders: boolean
+  lineMoves: boolean
   vaultOpen: boolean
   bookIn: boolean
   weekResults: boolean
@@ -255,8 +270,9 @@ All functions are callable (HTTPS onCall) unless noted. Each function checks aut
 | `createWeek` | Admin | Creates the next week with type, buy-in and lockAt; sets `sharePriceAtOpen` = season `sharePrice` |
 | `markBuyInPaid` | Admin | In a transaction, validates the week is `open` and the player is not already paid, issues `shares = amountCents/100 / sharePriceAtOpen`, increments season `totalShares`, `vaultCents` and the player's standings `shares` and `weeksBoughtIn`, and writes a `buy_in` ledger entry |
 | `unmarkBuyIn` | Admin | Reverses the above while the week is `open`; also deletes the player's pick |
-| `submitPick` | Player | Validates the week is `open`, the buy-in is paid, now < lockAt, and the odds are valid; upserts `picks/{uid}` |
+| `submitPick` | Player | Validates the week is `open`, the buy-in is paid, now < lockAt, and the odds are valid; upserts `picks/{uid}`. Accepts an optional odds-board `line`; a reseal clears `lineNow` and `lineAlertedAt` |
 | `adminSubmitPick` | Admin | Enters or edits a pick on a paid player's behalf. Allowed in any status except `closed`, so picks collected offline (e.g. in the group chat) can be entered after lock. Records `enteredBy` on the pick doc |
+| `adjustPickAtOpen` | Admin | While the week is `locked`: sets a pick's `pickText` and `americanOdds` to its vault-open line, keeping the original in `sealed` (first time only) and recording `priceAdjustedBy` (§1.3) |
 | `lockDueWeeks` | Scheduled (every 5 min) | For weeks with `status=open` and `lockAt<=now`, sets `locked`, `openingVaultCents` = season `vaultCents`, and `bookCapCents = floor(opening × 0.25)`. The same run sends seal-your-pick push reminders 20 h and 1 h before `lockAt` to paid players without a pick |
 | `openVaultEarly` | Admin | Locks an `open` week before `lockAt` with the same snapshot as `lockDueWeeks`. Fails unless at least one buy-in is paid and every paid player has a pick. Leaves `lockAt` unchanged |
 | `placeBookBet` | Bookholder | Validates the week is `locked`, every leg is a pick in this week, stake > 0, and the sum of stakes ≤ `bookCapCents`; records the ticket odds and default payout |
@@ -267,7 +283,8 @@ All functions are callable (HTTPS onCall) unless noted. Each function checks aut
 | `closeWeek` | Admin | See below |
 | `overrideBookholder` | Admin | Sets the next or current Bookholder and writes a `bookDecision` with `admin_override` |
 | `announceBook` | Bookholder (or Admin) | While `locked`, after at least one bet, once per week: sets `bookAnnouncedAt` and pushes "The Book's in" to the crew |
-| `onWeekUpdated` | Firestore trigger | Pushes "the vault is open" when a week goes `open` → `locked`, and the week's results when it closes |
+| `onWeekUpdated` | Firestore trigger | Pushes "the vault is open" when a week goes `open` → `locked`, and the week's results when it closes. On `open` → `locked` it also pulls odds once per sport with linked picks, then re-prices them to the vault-open line (§1.3 line moves) |
+| `pullOdds` / `pullCollegeOdds` / `pullOddsNow` | Scheduled / Admin | Pull DraftKings lines into `odds/feed` / `odds/feedNcaaf`, then update `lineNow` on the current week's linked picks and send any line-move pushes (only while the week is `open`) |
 | `finalizeSeason` | Admin | After the SB week closes, computes the Sharp (units leader; tie → surfaced to Admin to resolve), writes the `sharp_award` entry, computes each player's 90% share-based portion, and sets season `finalized` |
 
 ### `closeWeek` (single transaction)

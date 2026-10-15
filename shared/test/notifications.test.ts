@@ -39,7 +39,7 @@ describe('dueReminder', () => {
 
 describe('prefsWithDefaults', () => {
   it('treats a missing doc or field as on', () => {
-    expect(prefsWithDefaults(null)).toEqual({ reminders: true, vaultOpen: true, bookIn: true, weekResults: true });
+    expect(prefsWithDefaults(null)).toEqual({ reminders: true, lineMoves: true, vaultOpen: true, bookIn: true, weekResults: true });
     expect(prefsWithDefaults({ bookIn: false }).bookIn).toBe(false);
     expect(prefsWithDefaults({ bookIn: false }).reminders).toBe(true);
   });

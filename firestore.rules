@@ -53,14 +53,18 @@ service cloud.firestore {
 
     // comments/{id} — "Kade's Comment Section", a simple group message board
     // (not part of SPEC.md). Any signed-in player can post as themselves;
-    // the author or an Admin can delete; nobody edits a posted comment.
+    // the author or an Admin can delete; nobody edits a posted comment. A
+    // reply carries parentId, which must point at an existing comment.
     match /comments/{id} {
       allow read: if isSignedIn();
       allow create: if isSignedIn()
         && request.resource.data.authorId == request.auth.uid
         && request.resource.data.text is string
         && request.resource.data.text.size() > 0
-        && request.resource.data.text.size() <= 1000;
+        && request.resource.data.text.size() <= 1000
+        && (!('parentId' in request.resource.data)
+          || (request.resource.data.parentId is string
+            && exists(/databases/$(database)/documents/comments/$(request.resource.data.parentId))));
       allow delete: if isSignedIn() && (resource.data.authorId == request.auth.uid || isAdmin());
       allow update: if false;
     }
@@ -101,8 +105,9 @@ service cloud.firestore {
     match /notificationPrefs/{uid} {
       allow read: if isSelf(uid);
       allow write: if isSelf(uid)
-        && request.resource.data.keys().hasOnly(['reminders', 'vaultOpen', 'bookIn', 'weekResults'])
+        && request.resource.data.keys().hasOnly(['reminders', 'lineMoves', 'vaultOpen', 'bookIn', 'weekResults'])
         && request.resource.data.get('reminders', true) is bool
+        && request.resource.data.get('lineMoves', true) is bool
         && request.resource.data.get('vaultOpen', true) is bool
         && request.resource.data.get('bookIn', true) is bool
         && request.resource.data.get('weekResults', true) is bool;

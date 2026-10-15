@@ -327,6 +327,21 @@ describe('firestore.rules', () => {
       await assertSucceeds(deleteDoc(doc(p1.firestore(), `comments/${ref.id}`)));
     });
 
+    it('lets a player reply to an existing comment, but not to a missing one', async () => {
+      const p1 = asPlayer('P1');
+      const parent = await addDoc(collection(p1.firestore(), 'comments'), {
+        authorId: 'P1',
+        authorName: 'P1',
+        text: 'hello crew',
+        createdAt: Timestamp.now(),
+      });
+      const reply = { authorId: 'P2', authorName: 'P2', text: 'hey', createdAt: Timestamp.now() };
+      const p2 = asPlayer('P2');
+      await assertSucceeds(addDoc(collection(p2.firestore(), 'comments'), { ...reply, parentId: parent.id }));
+      await assertFails(addDoc(collection(p2.firestore(), 'comments'), { ...reply, parentId: 'no-such-comment' }));
+      await assertFails(addDoc(collection(p2.firestore(), 'comments'), { ...reply, parentId: 42 }));
+    });
+
     it('lets an admin delete any comment', async () => {
       const p1 = asPlayer('P1');
       const ref = await addDoc(collection(p1.firestore(), 'comments'), {
@@ -417,7 +432,8 @@ describe('firestore.rules', () => {
 
     it('lets a player set only their own notification switches, as booleans', async () => {
       const p1 = asPlayer('P1').firestore();
-      await assertSucceeds(setDoc(doc(p1, 'notificationPrefs/P1'), { reminders: false, bookIn: true }));
+      await assertSucceeds(setDoc(doc(p1, 'notificationPrefs/P1'), { reminders: false, lineMoves: false, bookIn: true }));
+      await assertFails(setDoc(doc(p1, 'notificationPrefs/P1'), { lineMoves: 'no' }));
       await assertSucceeds(getDoc(doc(p1, 'notificationPrefs/P1')));
       await assertFails(getDoc(doc(asPlayer('P2').firestore(), 'notificationPrefs/P1')));
       await assertFails(setDoc(doc(asPlayer('P2').firestore(), 'notificationPrefs/P1'), { reminders: true }));

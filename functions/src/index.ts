@@ -26,10 +26,11 @@ import {
   placeBookBetLogic,
   updateBookBetLogic,
 } from './logic/bookBets.js';
+import { linkedSportsForWeek, priceWeekAtOpenLogic } from './logic/lineMoves.js';
 import { lockDueWeeksLogic, openVaultEarlyLogic } from './logic/lock.js';
 import { announceBookLogic, onWeekUpdatedLogic, sendDueRemindersLogic } from './logic/notify.js';
 import { parseOddsSport, pullOddsLogic, setOddsPausedLogic } from './logic/odds.js';
-import { adminSubmitPickLogic, gradePickLogic, submitPickLogic } from './logic/picks.js';
+import { adjustPickAtOpenLogic, adminSubmitPickLogic, gradePickLogic, submitPickLogic } from './logic/picks.js';
 import { markPreloadPaidLogic, unmarkPreloadLogic } from './logic/preload.js';
 import {
   removePlayerFromSeasonLogic,
@@ -51,6 +52,13 @@ setGlobalOptions({ region: 'us-central1', maxInstances: 10 });
 function db() {
   return getFirestore();
 }
+
+/**
+ * The Odds API key lives in Google Cloud Secret Manager. Zach sets it himself
+ * (never through a command Claude runs); the value never touches the repo or
+ * Firestore.
+ */
+const oddsApiKey = defineSecret('ODDS_API_KEY');
 
 /** Health check: confirms the callable transport and the /shared import chain. */
 export const ping = onCall((request) => {
@@ -128,6 +136,12 @@ export const adminSubmitPick = onCall((request) => {
   return adminSubmitPickLogic(db(), { ...request.data, enteredBy });
 });
 
+/** Admin: set a typed-in pick's vault-open line by hand (SPEC.md §1.3). */
+export const adjustPickAtOpen = onCall((request) => {
+  const adjustedBy = requireAdmin(request);
+  return adjustPickAtOpenLogic(db(), { ...request.data, adjustedBy });
+});
+
 export const startGrading = onCall((request) => {
   requireAdmin(request);
   return startGradingLogic(db(), request.data);
@@ -182,13 +196,33 @@ export const lockDueWeeks = onSchedule('every 5 minutes', async () => {
   await sendDueRemindersLogic(db(), fcmSender);
 });
 
-/** Push "the vault is open" when a week locks, and the results when it closes. */
-export const onWeekUpdated = onDocumentUpdated({ document: 'seasons/{seasonId}/weeks/{weekId}', retry: false }, async (event) => {
-  const before = event.data?.before.data() as Week | undefined;
-  const after = event.data?.after.data() as Week | undefined;
-  if (!before || !after || before.status === after.status) return;
-  await onWeekUpdatedLogic(db(), fcmSender, { seasonId: event.params.seasonId, weekId: event.params.weekId, before, after });
-});
+/**
+ * Push "the vault is open" when a week locks, and the results when it closes.
+ * When it locks, pull fresh lines once for each sport the picks came from,
+ * then re-price those picks to the line at vault open (SPEC.md §1.3).
+ */
+export const onWeekUpdated = onDocumentUpdated(
+  { document: 'seasons/{seasonId}/weeks/{weekId}', retry: false, secrets: [oddsApiKey] },
+  async (event) => {
+    const before = event.data?.before.data() as Week | undefined;
+    const after = event.data?.after.data() as Week | undefined;
+    if (!before || !after || before.status === after.status) return;
+    const { seasonId, weekId } = event.params;
+    await onWeekUpdatedLogic(db(), fcmSender, { seasonId, weekId, before, after });
+
+    if (before.status === 'open' && after.status === 'locked') {
+      for (const sport of await linkedSportsForWeek(db(), seasonId, weekId)) {
+        try {
+          await pullOddsLogic(db(), { apiKey: oddsApiKey.value(), trigger: 'lock', sport, sender: fcmSender });
+        } catch (err) {
+          // Still re-price from the last scheduled pull below.
+          console.error(`vault-open ${sport} pull failed`, err);
+        }
+      }
+      await priceWeekAtOpenLogic(db(), { seasonId, weekId });
+    }
+  },
+);
 
 /** The key holder's "Book's in" button. */
 export const announceBook = onCall((request) => {
@@ -201,13 +235,6 @@ export const openVaultEarly = onCall((request) => {
   requireAdmin(request);
   return openVaultEarlyLogic(db(), request.data);
 });
-
-/**
- * The Odds API key lives in Google Cloud Secret Manager. Zach sets it himself
- * (never through a command Claude runs); the value never touches the repo or
- * Firestore.
- */
-const oddsApiKey = defineSecret('ODDS_API_KEY');
 
 /**
  * DraftKings lines Tuesday–Friday ET while a week is open: NFL every 4 hours,
@@ -224,7 +251,7 @@ function scheduledPull(sport: OddsSport) {
       maxInstances: 1,
     },
     async () => {
-      await pullOddsLogic(db(), { apiKey: oddsApiKey.value(), trigger: 'schedule', sport });
+      await pullOddsLogic(db(), { apiKey: oddsApiKey.value(), trigger: 'schedule', sport, sender: fcmSender });
     },
   );
 }
@@ -236,7 +263,7 @@ export const pullCollegeOdds = scheduledPull('ncaaf');
 export const pullOddsNow = onCall({ secrets: [oddsApiKey], maxInstances: 1 }, (request) => {
   requireAdmin(request);
   const sport = parseOddsSport((request.data as { sport?: unknown } | null)?.sport);
-  return pullOddsLogic(db(), { apiKey: oddsApiKey.value(), trigger: 'manual', sport });
+  return pullOddsLogic(db(), { apiKey: oddsApiKey.value(), trigger: 'manual', sport, sender: fcmSender });
 });
 
 export const setOddsPaused = onCall((request) => {

@@ -1,6 +1,16 @@
 import { httpsCallable } from 'firebase/functions';
 import { useEffect, useState } from 'react';
-import { isValidAmericanOdds, unitsForPick } from '@vault/shared';
+import {
+  ODDS_FEED_DOC_IDS,
+  findPickLine,
+  isValidAmericanOdds,
+  lineMove,
+  oddsPickText,
+  unitsForPick,
+  type OddsFeed,
+  type Pick,
+  type PickLine,
+} from '@vault/shared';
 import { useAuth } from '../auth/AuthProvider';
 import Countdown from '../components/Countdown';
 import OddsBoard from '../components/OddsBoard';
@@ -8,6 +18,7 @@ import PickTicket, { ticketLabel } from '../components/heist/PickTicket';
 import { WaxSeal } from '../components/heist/Seals';
 import Ticket, { TicketStat } from '../components/heist/Ticket';
 import { EmptyState, ErrorBanner } from '../components/ui';
+import { useDocData } from '../hooks/useDocData';
 import { useVaultData } from '../hooks/VaultDataProvider';
 import { useMyBuyIn, useMyPick } from '../hooks/useWeekData';
 import { functions } from '../lib/firebase';
@@ -15,7 +26,7 @@ import { COPY } from '../lib/copy';
 import { formatCents, formatOdds, formatTimestampET, formatUnits, parseOddsInput, weekLabel } from '../lib/format';
 
 const submitPick = httpsCallable<
-  { seasonId: string; weekId: string; pickText: string; gameText: string; americanOdds: number },
+  { seasonId: string; weekId: string; pickText: string; gameText: string; americanOdds: number; line?: PickLine },
   void
 >(functions, 'submitPick');
 
@@ -28,6 +39,8 @@ export default function SubmitPick() {
   const [gameText, setGameText] = useState('');
   const [pickText, setPickText] = useState('');
   const [oddsInput, setOddsInput] = useState('');
+  /** The board line the form was filled from; dropped if the game or pick is retyped. */
+  const [line, setLine] = useState<PickLine | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -37,6 +50,7 @@ export default function SubmitPick() {
     setGameText(pick.gameText);
     setPickText(pick.pickText);
     setOddsInput(String(pick.americanOdds));
+    setLine(pick.line ?? null);
   }, [pick]);
 
   if (!season || !week) {
@@ -72,6 +86,7 @@ export default function SubmitPick() {
         gameText: gameText.trim(),
         pickText: pickText.trim(),
         americanOdds: odds,
+        ...(line ? { line } : {}),
       });
       setSuccess(true);
     } catch (err) {
@@ -114,8 +129,25 @@ export default function SubmitPick() {
           <form className="flex flex-col gap-3" onSubmit={(e) => void handleSubmit(e)}>
             <p className="text-xs text-vault-gold-soft/60">
               One Best Bet per week. The vault opens {formatTimestampET(week.lockAt)}; only games starting after that count
-              (honor system).
+              (honor system). Picks from the board are priced at the DraftKings line when the vault opens.
             </p>
+            {pick?.line && pick.lineNow && !disabledReason && (
+              <LineMoved
+                pick={pick}
+                line={pick.line}
+                onReseal={async (next) => {
+                  setError(null);
+                  setSuccess(false);
+                  try {
+                    await submitPick({ seasonId: season.id, weekId: week.id, ...next });
+                    setSuccess(true);
+                  } catch (err) {
+                    setError(err instanceof Error ? err.message : String(err));
+                  }
+                }}
+              />
+            )}
+
             {disabledReason && (
               <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-400">
                 {disabledReason}
@@ -129,6 +161,7 @@ export default function SubmitPick() {
                 setGameText(s.gameText);
                 setPickText(s.pickText);
                 setOddsInput(String(s.americanOdds));
+                setLine(s.line);
                 setSuccess(false);
               }}
             />
@@ -137,7 +170,10 @@ export default function SubmitPick() {
               <input
                 id="pick-game"
                 value={gameText}
-                onChange={(e) => setGameText(e.target.value)}
+                onChange={(e) => {
+                  setGameText(e.target.value);
+                  setLine(null);
+                }}
                 placeholder="CHI vs CAR"
                 disabled={Boolean(disabledReason)}
                 className={inputClass}
@@ -148,7 +184,10 @@ export default function SubmitPick() {
               <input
                 id="pick-text"
                 value={pickText}
-                onChange={(e) => setPickText(e.target.value)}
+                onChange={(e) => {
+                  setPickText(e.target.value);
+                  setLine(null);
+                }}
                 placeholder="Bears -2.5"
                 disabled={Boolean(disabledReason)}
                 className={inputClass}
@@ -215,6 +254,70 @@ export default function SubmitPick() {
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * Shown when the DraftKings line on the sealed pick has moved since sealing
+ * (from the latest odds pull). One tap reseals at the current line; the form
+ * below still works for keeping it or picking something else.
+ */
+function LineMoved({
+  pick,
+  line,
+  onReseal,
+}: {
+  pick: Pick;
+  line: PickLine;
+  onReseal: (next: { gameText: string; pickText: string; americanOdds: number; line: PickLine }) => Promise<void>;
+}) {
+  const { data: feed } = useDocData<OddsFeed>(`odds/${ODDS_FEED_DOC_IDS[line.sport]}`);
+  const [busy, setBusy] = useState(false);
+  const now = pick.lineNow!;
+  const move = lineMove({ odds: pick.americanOdds, point: line.point }, now);
+  if (move.oddsCents === 0 && !move.pointChanged) return null;
+
+  const current = feed ? findPickLine(feed.games, line) : null;
+  const nowText = current ? oddsPickText(current.game, line.choice, current.line) : pick.pickText;
+  const nowOdds = current?.line.odds ?? now.odds;
+
+  return (
+    <section
+      className={`flex flex-col gap-2 rounded-lg border px-3 py-2.5 text-sm ${
+        move.significant ? 'border-amber-500/40 bg-amber-500/10 text-amber-300' : 'border-vault-line text-vault-gold-soft/75'
+      }`}
+    >
+      <p className="font-semibold">Your line moved</p>
+      <p>
+        You sealed <span className="font-mono">{pick.pickText} {formatOdds(pick.americanOdds)}</span>. DraftKings has{' '}
+        <span className="font-mono">
+          {nowText} {formatOdds(nowOdds)}
+        </span>{' '}
+        as of {formatTimestampET(now.checkedAt)}.
+      </p>
+      <p className="text-xs opacity-80">
+        The line when the vault opens is what counts. Reseal at the new line, pick something else below, or keep it.
+      </p>
+      {current && (
+        <button
+          type="button"
+          disabled={busy}
+          onClick={async () => {
+            setBusy(true);
+            await onReseal({
+              gameText: pick.gameText,
+              pickText: nowText,
+              americanOdds: current.line.odds,
+              line: { ...line, point: current.line.point },
+            });
+            setBusy(false);
+          }}
+          className="min-h-11 rounded-lg border border-vault-gold/60 px-3 text-sm font-semibold text-vault-gold transition hover:bg-vault-gold/10 disabled:opacity-40"
+        >
+          {busy ? 'Sealing…' : `Reseal at ${nowText} ${formatOdds(current.line.odds)}`}
+        </button>
+      )}
+    </section>
   );
 }
 

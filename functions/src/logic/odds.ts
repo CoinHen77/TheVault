@@ -13,15 +13,20 @@ import {
   type OddsCallLogEntry,
   type OddsCallOutcome,
   type OddsFeed,
+  type OddsPullTrigger,
   type OddsSettings,
   type OddsSport,
   type OddsUsageMonth,
 } from '@vault/shared';
 import { oddsFeedDoc, oddsSettingsDoc, oddsUsageDoc, weekDoc } from '../paths.js';
+import { refreshPickLinesLogic } from './lineMoves.js';
+import type { PushSender } from './notify.js';
 
 export interface PullOddsParams {
   apiKey: string | undefined;
-  trigger: 'schedule' | 'manual';
+  trigger: OddsPullTrigger;
+  /** Sends line-move alerts after the pull; without one, prices still update but nobody is pushed. */
+  sender?: PushSender;
   /** Which league to pull; defaults to NFL. */
   sport?: OddsSport;
   /** Injectable for tests; defaults to the real clock. */
@@ -141,8 +146,8 @@ export async function pullOddsLogic(db: Firestore, params: PullOddsParams): Prom
     const usage = usageSnap.exists ? (usageSnap.data() as OddsUsageMonth) : emptyUsage(monthKey);
     const settings = settingsSnap.exists ? (settingsSnap.data() as OddsSettings) : { paused: false };
     const reason = oddsPullBlockReason({
-      // "Pull now" is a deliberate Admin action, so the pause only stops the schedule.
-      paused: params.trigger === 'schedule' && settings.paused,
+      // "Pull now" is a deliberate Admin action, so the pause only stops the automatic pulls.
+      paused: params.trigger !== 'manual' && settings.paused,
       monthCreditsUsed: usage.creditsUsed,
       apiRemaining: usage.apiRemaining,
     });
@@ -210,6 +215,13 @@ export async function pullOddsLogic(db: Firestore, params: PullOddsParams): Prom
     games: games.map(({ commenceMs, ...game }) => ({ ...game, commenceAt: Timestamp.fromMillis(commenceMs) })),
   };
   await oddsFeedDoc(db, sport).set(feed);
+
+  // A failure here must not lose the pull's usage record; the next pull retries.
+  try {
+    await refreshPickLinesLogic(db, params.sender ?? null, { sport, games, nowMs });
+  } catch (err) {
+    console.error('refreshing pick lines failed', err);
+  }
 
   const cost = lastCost ?? ODDS_CREDITS_PER_PULL;
   await releaseReservation(cost);

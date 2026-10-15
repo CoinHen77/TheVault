@@ -57,7 +57,8 @@ export default function Rules() {
           higher). The vault opens at 4:00 PM ET on Friday. From then on picks are final, and only games starting
           after that count, so Thursday night is out (honor system). If every paid player has sealed a pick, the
           Admin can open the vault early; the Friday 4:00 PM cutoff still applies. Nobody sees your pick until the
-          vault opens.
+          vault opens. A pick from the odds board is priced at the DraftKings line when the vault opens, and that
+          line is what gets graded. If your line moves before then, you&apos;ll get a heads-up to reseal or keep it.
         </Step>
 
         <Step n="03" title={`The ${COPY.bookholder} runs the Book`}>

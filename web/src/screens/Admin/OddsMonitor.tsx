@@ -164,7 +164,7 @@ export default function OddsMonitor() {
                 <li key={i} className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 py-1.5">
                   <span className="text-vault-gold-soft/70">
                     {formatTimestampET(entry.at)} · {ODDS_SPORT_LABELS[entry.sport ?? 'nfl']} ·{' '}
-                    {entry.trigger === 'manual' ? 'Pull now' : 'Schedule'}
+                    {entry.trigger === 'manual' ? 'Pull now' : entry.trigger === 'lock' ? 'Vault opened' : 'Schedule'}
                   </span>
                   <span
                     className={

@@ -169,7 +169,7 @@ describe('oddsPullBlockReason', () => {
   });
 
   it('keeps the worst-case schedule inside the budget', () => {
-    expect(ODDS_WORST_CASE_MONTH_CREDITS).toBe(399);
+    expect(ODDS_WORST_CASE_MONTH_CREDITS).toBe(429); // 399 scheduled + 30 at vault openings
     expect(ODDS_WORST_CASE_MONTH_CREDITS).toBeLessThan(ODDS_MONTHLY_BUDGET);
     expect(ODDS_MONTHLY_BUDGET).toBeLessThan(ODDS_FREE_TIER_CREDITS);
   });

@@ -14,6 +14,10 @@ const KIND_COPY: Record<NotifyKind, { title: string; detail: string }> = {
     title: 'Seal-your-pick reminders',
     detail: 'The night before the vault opens and an hour out, only if you’ve paid and haven’t sealed a pick.',
   },
+  lineMoves: {
+    title: 'Your line moved',
+    detail: 'If the DraftKings line on your sealed pick moves before the vault opens, so you can reseal. Once per seal.',
+  },
   vaultOpen: {
     title: 'The vault is open',
     detail: `When picks are revealed. The ${COPY.bookholder} gets their own nudge to place bets.`,

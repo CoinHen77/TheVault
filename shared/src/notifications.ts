@@ -24,13 +24,14 @@ function etTime(ms: number): string {
   );
 }
 
-export type NotifyKind = 'reminders' | 'vaultOpen' | 'bookIn' | 'weekResults';
-export const NOTIFY_KINDS: NotifyKind[] = ['reminders', 'vaultOpen', 'bookIn', 'weekResults'];
+export type NotifyKind = 'reminders' | 'lineMoves' | 'vaultOpen' | 'bookIn' | 'weekResults';
+export const NOTIFY_KINDS: NotifyKind[] = ['reminders', 'lineMoves', 'vaultOpen', 'bookIn', 'weekResults'];
 
 /** `notificationPrefs/{uid}` — written by the player. A missing doc or field means on. */
 export type NotificationPrefs = Record<NotifyKind, boolean>;
 export const DEFAULT_NOTIFICATION_PREFS: NotificationPrefs = {
   reminders: true,
+  lineMoves: true,
   vaultOpen: true,
   bookIn: true,
   weekResults: true,
@@ -100,6 +101,15 @@ export function reminderMessage(key: ReminderKey, weekName: string, lockAtMs: nu
         tab: 'pick',
       }
     : { title: 'Last call', body: `The vault opens in an hour. Seal your ${weekName} pick now.`, tab: 'pick' };
+}
+
+/** `sealedLabel` and `nowLabel` are like "Bears -2.5 (-110)". */
+export function lineMoveMessage(sealedLabel: string, nowLabel: string): PushMessage {
+  return {
+    title: 'Your line moved',
+    body: `You sealed ${sealedLabel}. DraftKings has it at ${nowLabel} now, and the line when the vault opens is what counts. Reseal, pick something else, or keep it.`,
+    tab: 'pick',
+  };
 }
 
 export function vaultOpenMessage(weekName: string, keyHolderName: string, forKeyHolder: boolean): PushMessage {

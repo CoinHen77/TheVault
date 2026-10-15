@@ -1,6 +1,13 @@
 import { httpsCallable } from 'firebase/functions';
 import { useMemo, useState } from 'react';
-import { defaultBookPayoutCents, isValidAmericanOdds } from '@vault/shared';
+import {
+  defaultBookPayoutCents,
+  formatSpreadPoint,
+  isValidAmericanOdds,
+  lineMove,
+  type Pick,
+  type PickLineNow,
+} from '@vault/shared';
 import { useAuth } from '../auth/AuthProvider';
 import CapRing from '../components/heist/CapRing';
 import Door from '../components/heist/Door';
@@ -26,7 +33,7 @@ const placeBookBet = httpsCallable<
 >(functions, 'placeBookBet');
 
 export default function Book() {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const { season, week, players } = useVaultData();
   const picksEnabled = Boolean(week) && week!.status !== 'open';
   const { data: picks } = usePicks(season?.id ?? null, week?.id ?? null, picksEnabled);
@@ -76,6 +83,15 @@ export default function Book() {
           betCount={bets?.length ?? 0}
           announcedAt={week.bookAnnouncedAt ?? null}
           isBookholder={isBookholder}
+        />
+      )}
+
+      {isAdmin && week.status === 'locked' && picks && picks.some((p) => !p.line) && (
+        <SetOpenPrices
+          seasonId={season.id}
+          weekId={week.id}
+          picks={picks.filter((p) => !p.line)}
+          players={players}
         />
       )}
 
@@ -265,12 +281,17 @@ function BetBuilder({
                   }`}
                 >
                   {p.pickText} <span className="font-mono text-xs opacity-70">{formatOdds(p.americanOdds)}</span>
+                  {drift(p)?.significant && (
+                    <span className="ml-1 font-mono text-xs text-amber-400">→ {nowText(p, p.lineNow!)}</span>
+                  )}
                   <span className="sr-only"> ({players[p.id]?.displayName ?? p.id})</span>
                 </button>
               );
             })}
           </div>
         </fieldset>
+
+        {legIds.length > 0 && <LineCheck legs={picks.filter((p) => legIds.includes(p.id))} players={players} />}
 
         <div className="grid grid-cols-2 gap-3">
           <label className="flex flex-col gap-1 text-[11px] font-medium uppercase tracking-[0.12em] text-vault-gold-soft/60">
@@ -344,6 +365,199 @@ function BetBuilder({
           {submitting ? 'Placing…' : `Place bet · ${formatCents(capRemainingCents)} left`}
         </button>
       </form>
+    </section>
+  );
+}
+
+const adjustPickAtOpen = httpsCallable<
+  { seasonId: string; weekId: string; playerId: string; pickText: string; americanOdds: number },
+  void
+>(functions, 'adjustPickAtOpen');
+
+/**
+ * Admin only: picks typed in by hand (props and anything not on the board)
+ * can't be priced from the feed, so the Admin sets their vault-open line here,
+ * from the book, before the bet goes in. Units and the key decision use it.
+ */
+function SetOpenPrices({
+  seasonId,
+  weekId,
+  picks,
+  players,
+}: {
+  seasonId: string;
+  weekId: string;
+  picks: ({ id: string } & Pick)[];
+  players: Record<string, import('@vault/shared').Player>;
+}) {
+  return (
+    <section className="flex flex-col gap-3 rounded-2xl border border-vault-line bg-vault-panel p-4">
+      <div>
+        <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-vault-gold-soft/60">
+          Typed-in picks · set the open line
+        </h2>
+        <p className="mt-1 text-xs text-vault-gold-soft/60">
+          These weren&apos;t picked from the board, so the app can&apos;t price them. Enter the line your book has now; units
+          and the key use it. Admin only.
+        </p>
+      </div>
+      <ul className="flex flex-col gap-3">
+        {picks.map((p) => (
+          <li key={p.id}>
+            <SetOpenPriceRow seasonId={seasonId} weekId={weekId} pick={p} name={players[p.id]?.displayName ?? p.id} />
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function SetOpenPriceRow({
+  seasonId,
+  weekId,
+  pick,
+  name,
+}: {
+  seasonId: string;
+  weekId: string;
+  pick: { id: string } & Pick;
+  name: string;
+}) {
+  const [pickText, setPickText] = useState(pick.pickText);
+  const [oddsInput, setOddsInput] = useState(String(pick.americanOdds));
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const odds = parseOddsInput(oddsInput);
+  const valid = pickText.trim() !== '' && oddsInput.trim() !== '' && isValidAmericanOdds(odds);
+  const changed = pickText.trim() !== pick.pickText || odds !== pick.americanOdds;
+
+  return (
+    <form
+      className="flex flex-col gap-2"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        if (!valid || !changed) return;
+        setBusy(true);
+        setError(null);
+        try {
+          await adjustPickAtOpen({ seasonId, weekId, playerId: pick.id, pickText: pickText.trim(), americanOdds: odds });
+        } catch (err) {
+          setError(err instanceof Error ? err.message : String(err));
+        } finally {
+          setBusy(false);
+        }
+      }}
+    >
+      <p className="text-sm text-vault-gold-soft/85">
+        {name} <span className="text-xs text-vault-gold-soft/50">· {pick.gameText}</span>
+      </p>
+      {pick.sealed && (
+        <p className="text-xs text-vault-gold-soft/55">
+          Sealed {pick.sealed.pickText} <span className="font-mono">{formatOdds(pick.sealed.americanOdds)}</span>
+        </p>
+      )}
+      <div className="grid grid-cols-[1fr_6rem_auto] gap-2">
+        <input
+          aria-label={`${name}'s pick`}
+          value={pickText}
+          onChange={(e) => setPickText(e.target.value)}
+          className={inputClass}
+        />
+        <input
+          aria-label={`${name}'s odds`}
+          value={oddsInput}
+          onChange={(e) => setOddsInput(e.target.value)}
+          inputMode="text"
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck={false}
+          className={inputClass}
+        />
+        <button
+          type="submit"
+          disabled={!valid || !changed || busy}
+          className="min-h-11 rounded-lg border border-vault-gold/60 px-3 text-sm font-semibold text-vault-gold transition hover:bg-vault-gold/10 disabled:opacity-40"
+        >
+          {busy ? 'Saving…' : 'Save'}
+        </button>
+      </div>
+      {error && <ErrorBanner message={error} />}
+    </form>
+  );
+}
+
+/** How far a pick's line has moved since it was sealed, or null if there's no newer price to compare. */
+function drift(p: Pick) {
+  if (!p.line || !p.lineNow) return null;
+  return lineMove({ odds: p.americanOdds, point: p.line.point }, p.lineNow);
+}
+
+/** "-3 −115", or just "−115" when the point hasn't changed or there isn't one. */
+function nowText(p: Pick, now: PickLineNow): string {
+  const pointMoved = now.point !== null && now.point !== p.line?.point;
+  if (!pointMoved) return formatOdds(now.odds);
+  const isTotal = p.line?.choice === 'over' || p.line?.choice === 'under';
+  return `${isTotal ? now.point : formatSpreadPoint(now.point!)} ${formatOdds(now.odds)}`;
+}
+
+/**
+ * Each leg's pick odds (the vault-open price for board picks) vs. the latest
+ * DraftKings price, so the key holder can decide whether a leg is still worth
+ * it. Prices come from the last odds pull.
+ */
+function LineCheck({
+  legs,
+  players,
+}: {
+  legs: ({ id: string } & Pick)[];
+  players: Record<string, import('@vault/shared').Player>;
+}) {
+  const moved = legs.filter((p) => drift(p)?.significant).length;
+  return (
+    <section className="flex flex-col gap-2 rounded-lg border border-vault-line bg-vault-black/30 px-3 py-2.5">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-vault-gold-soft/60">
+        Line check{moved > 0 && <span className="text-amber-400"> · {moved} moved</span>}
+      </p>
+      <ul className="flex flex-col gap-1.5">
+        {legs.map((p) => {
+          const d = drift(p);
+          return (
+            <li key={p.id} className="flex items-baseline justify-between gap-3 text-sm">
+              <span className="min-w-0 truncate text-vault-gold-soft/85">
+                {p.pickText} <span className="text-xs text-vault-gold-soft/50">· {players[p.id]?.displayName ?? p.id}</span>
+              </span>
+              <span className="shrink-0 text-right font-mono text-xs">
+                <span className="text-vault-gold-soft/70">{formatOdds(p.americanOdds)}</span>
+                {d && d.oddsCents === 0 && !d.pointChanged ? (
+                  <span className="text-vault-gold-soft/40"> · no move</span>
+                ) : d && p.lineNow ? (
+                  <span className={d.significant ? 'text-amber-400' : 'text-vault-gold-soft/50'}>
+                    {' '}
+                    → {nowText(p, p.lineNow)}
+                  </span>
+                ) : (
+                  <span className="text-vault-gold-soft/40">
+                    {' '}
+                    {p.line ? '· no newer price' : p.priceAdjustedBy ? '· set at open' : '· typed in, no line'}
+                  </span>
+                )}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+      {legs.some((p) => p.lineNow) && (
+        <p className="text-xs text-vault-gold-soft/50">
+          Pick odds → DraftKings as of{' '}
+          {formatTimestampET(
+            legs
+              .map((p) => p.lineNow?.checkedAt)
+              .filter((t) => t !== undefined)
+              .sort((a, b) => b.toMillis() - a.toMillis())[0]!,
+          )}
+          . Check your book for the live price.
+        </p>
+      )}
     </section>
   );
 }

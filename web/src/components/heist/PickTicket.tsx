@@ -4,7 +4,7 @@ import { formatOdds, formatUnits } from '../../lib/format';
 import { ResultStamp, WaxSeal } from './Seals';
 import Ticket, { TicketStat } from './Ticket';
 
-type PickFields = Pick<PickDoc, 'pickText' | 'gameText' | 'americanOdds' | 'result' | 'units'>;
+type PickFields = Pick<PickDoc, 'pickText' | 'gameText' | 'americanOdds' | 'result' | 'units' | 'sealed'>;
 
 /** "Ticket · Wk 06" for regular weeks, "Ticket · Wild Card" etc. for playoffs. */
 export function ticketLabel(week: { nflWeek: number | null; type: WeekType }): string {
@@ -46,7 +46,16 @@ export default function PickTicket({
     <Ticket
       eyebrow={`${ticketLabel(week)}${usedInBook ? ' · Used in the Book' : ''}`}
       title={pick.pickText}
-      subtitle={subtitleOverride ?? pick.gameText}
+      subtitle={
+        <>
+          {subtitleOverride ?? pick.gameText}
+          {pick.sealed && (
+            <span className="block text-xs opacity-70">
+              Priced at vault open · sealed {pick.sealed.pickText} {formatOdds(pick.sealed.americanOdds)}
+            </span>
+          )}
+        </>
+      }
       muted={graded && pick.result !== 'win'}
       notchClassName={notchClassName}
       mark={sealed ? <WaxSeal /> : graded ? <ResultStamp result={pick.result} /> : undefined}

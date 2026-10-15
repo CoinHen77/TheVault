@@ -7,6 +7,8 @@
  * instances through these types without /shared depending on Firebase.
  */
 
+import type { PickLine, PickLineNow, PickSealed } from './lineMove.js';
+
 export interface TimestampLike {
   seconds: number;
   nanoseconds: number;
@@ -158,6 +160,18 @@ export interface Pick {
   units: number | null;
   /** Set when the Admin enters this pick on the player's behalf (SPEC.md §5 adminSubmitPick). */
   enteredBy?: string;
+  /** The odds-board line it was sealed from; missing for picks typed in by hand. */
+  line?: PickLine;
+  /** Latest DraftKings price for `line` (server-only, written by each odds pull). */
+  lineNow?: PickLineNow;
+  /** When the player was pushed that their line moved; once per seal (server-only). */
+  lineAlertedAt?: TimestampLike;
+  /** What was sealed, when the pick was re-priced at vault open (server-only). */
+  sealed?: PickSealed;
+  /** When the vault-open price was applied (server-only). */
+  pricedAtOpenAt?: TimestampLike;
+  /** The Admin who set the vault-open price by hand (adjustPickAtOpen), e.g. for a typed-in prop. */
+  priceAdjustedBy?: string;
 }
 
 /** seasons/{seasonId}/weeks/{weekId}/bookBets/{betId} */
@@ -194,6 +208,8 @@ export interface Comment {
   authorName: string;
   text: string;
   createdAt: TimestampLike;
+  /** Set on a reply: the comment (or reply) it answers. */
+  parentId?: string;
 }
 
 /** seasons/{seasonId}/standings/{uid} */

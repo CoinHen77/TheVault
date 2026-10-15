@@ -5,10 +5,12 @@
  * scheduled functions Tuesday–Friday ET: NFL every 4 hours, college once a
  * day. The free tier is 500 credits a month and each pull costs 1 credit per
  * market (3 here) whatever the number of games, so the worst month
- * (19 Tue–Fri days × 7 pulls × 3) is 399 credits. The guards below stop pulls
- * well before the limit in case something misfires.
+ * (19 Tue–Fri days × 7 pulls × 3) is 399 credits, plus one pull per sport
+ * when the vault opens (at most 5 a month × 2 sports × 3 = 30), so 429. The
+ * guards below stop pulls well before the limit in case something misfires.
  *
- * The feed only pre-fills the pick form — picks stay free-form text plus odds.
+ * The feed pre-fills the pick form. A pick sealed from it also keeps a link to
+ * its line, so moves can be tracked (see lineMove.ts).
  */
 import { isValidAmericanOdds } from './odds.js';
 import type { TimestampLike } from './types.js';
@@ -40,9 +42,15 @@ export const ODDS_PULL_SCHEDULES: Record<OddsSport, string> = {
 };
 /** Scheduled pulls per Tue–Fri day; must match ODDS_PULL_SCHEDULES. */
 export const ODDS_PULLS_PER_DAY: Record<OddsSport, number> = { nfl: 6, ncaaf: 1 };
-/** The schedule's ceiling: 19 Tue–Fri days (the most a month can have) × every sport's pulls. */
+/** At most one vault opening per week, so 5 in a month; each pulls every sport with linked picks once. */
+export const ODDS_LOCK_PULLS_PER_MONTH = 5;
+/**
+ * The ceiling: 19 Tue–Fri days (the most a month can have) × every sport's
+ * scheduled pulls, plus the pulls at each vault opening.
+ */
 export const ODDS_WORST_CASE_MONTH_CREDITS =
-  19 * (ODDS_PULLS_PER_DAY.nfl + ODDS_PULLS_PER_DAY.ncaaf) * ODDS_CREDITS_PER_PULL;
+  (19 * (ODDS_PULLS_PER_DAY.nfl + ODDS_PULLS_PER_DAY.ncaaf) + ODDS_LOCK_PULLS_PER_MONTH * ODDS_SPORTS.length) *
+  ODDS_CREDITS_PER_PULL;
 
 export const ODDS_PULL_TIMEZONE = 'America/New_York';
 
@@ -83,10 +91,12 @@ export interface OddsSettings {
 }
 
 export type OddsCallOutcome = 'ok' | 'error' | 'skipped';
+export type OddsPullTrigger = 'schedule' | 'manual' | 'lock';
 
 export interface OddsCallLogEntry {
   at: TimestampLike;
-  trigger: 'schedule' | 'manual';
+  /** `lock` is the pull when the vault opens, to refresh the lines the key holder sees. */
+  trigger: OddsPullTrigger;
   /** Missing on entries from before college odds were added (all NFL). */
   sport?: OddsSport;
   outcome: OddsCallOutcome;
