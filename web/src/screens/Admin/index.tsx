@@ -20,6 +20,7 @@ import OverrideBookholder from './OverrideBookholder';
 import PicksGrading from './PicksGrading';
 import { CreateNextWeek, WeekEditor, WeekPicker } from './WeekManager';
 import WeekLifecycleActions from './WeekLifecycleActions';
+import WeeklyUpdate from './WeeklyUpdate';
 
 /**
  * The Control room (SPEC.md §7 screen 8, CLAUDE.md H5). Weekly work up top:
@@ -107,6 +108,8 @@ export default function Admin() {
               </div>
             </>
           )}
+
+          {weeks && <WeeklyUpdate seasonId={season.id} seasonName={season.name} weeks={weeks} players={players} />}
 
           <section className="flex flex-col gap-2">
             <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-vault-gold-soft/60">

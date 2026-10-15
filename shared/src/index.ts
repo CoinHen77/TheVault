@@ -17,5 +17,6 @@ export * from './book.js';
 export * from './bookholder.js';
 export * from './oddsFeed.js';
 export * from './lineMove.js';
+export * from './weeklyReport.js';
 export * from './lockTime.js';
 export * from './notifications.js';
