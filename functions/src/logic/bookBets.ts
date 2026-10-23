@@ -159,7 +159,7 @@ export interface DeleteBookBetParams {
   isAdmin: boolean;
 }
 
-/** SPEC.md §5 deleteBookBet: allowed only while the week is locked. */
+/** SPEC.md §5 deleteBookBet: allowed only while the week is locked; the key holder only until "Book's in". */
 export async function deleteBookBetLogic(db: Firestore, params: DeleteBookBetParams): Promise<void> {
   const { seasonId, weekId, betId, uid, isAdmin } = params;
 
@@ -173,6 +173,10 @@ export async function deleteBookBetLogic(db: Firestore, params: DeleteBookBetPar
     throw new HttpsError('failed-precondition', `Week ${weekId} is ${week.status}, not locked.`);
   }
   assertBookholderOrAdmin(week, uid, isAdmin);
+  // Once the crew is told "the Book's in", the bets are real; only the Admin can pull one.
+  if (!isAdmin && week.bookAnnouncedAt) {
+    throw new HttpsError('failed-precondition', "The crew was already told the Book's in. Ask the Admin to remove a bet.");
+  }
   if (!betSnap.exists) throw new HttpsError('not-found', `Book bet ${betId} not found.`);
 
   await betRef.delete();

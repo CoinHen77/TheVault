@@ -27,7 +27,7 @@ import {
   updateBookBetLogic,
 } from './logic/bookBets.js';
 import { linkedSportsForWeek, priceWeekAtOpenLogic } from './logic/lineMoves.js';
-import { lockDueWeeksLogic, openVaultEarlyLogic } from './logic/lock.js';
+import { lockDueWeeksLogic, openVaultEarlyLogic, resealVaultLogic } from './logic/lock.js';
 import { announceBookLogic, onWeekUpdatedLogic, sendDueRemindersLogic } from './logic/notify.js';
 import { parseOddsSport, pullOddsLogic, setOddsPausedLogic } from './logic/odds.js';
 import { adjustPickAtOpenLogic, adminSubmitPickLogic, gradePickLogic, submitPickLogic } from './logic/picks.js';
@@ -234,6 +234,12 @@ export const announceBook = onCall((request) => {
 export const openVaultEarly = onCall((request) => {
   requireAdmin(request);
   return openVaultEarlyLogic(db(), request.data);
+});
+
+/** Admin: put an open vault back to taking picks, with a new deadline, for late players. */
+export const resealVault = onCall((request) => {
+  requireAdmin(request);
+  return resealVaultLogic(db(), request.data);
 });
 
 /**

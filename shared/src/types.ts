@@ -122,6 +122,12 @@ export interface Week {
   remindersSent?: Partial<Record<'eve' | 'lastCall', boolean>>;
   /** When the key holder tapped "Book's in" (server-only; it can be sent once). */
   bookAnnouncedAt?: TimestampLike;
+  /**
+   * When the Admin last resealed the vault (locked → open) for late picks
+   * (server-only; see resealVault). While set, only paid players without a
+   * pick can seal one.
+   */
+  resealedAt?: TimestampLike;
 }
 
 /** seasons/{seasonId}/weeks/{weekId}/buyIns/{uid} */

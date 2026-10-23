@@ -113,14 +113,70 @@ export default function Book() {
           ) : (
             <ul className="grid gap-3 md:grid-cols-2">
               {bets.map((bet) => (
-                <li key={bet.id}>
+                <li key={bet.id} className="flex flex-col gap-1">
                   <BetTicket bet={bet} legName={legName} />
+                  {week.status === 'locked' && (isAdmin || (isBookholder && !week.bookAnnouncedAt)) && (
+                    <DeleteBet seasonId={season.id} weekId={week.id} betId={bet.id} />
+                  )}
                 </li>
               ))}
             </ul>
           )}
         </section>
       )}
+    </div>
+  );
+}
+
+const deleteBookBet = httpsCallable<{ seasonId: string; weekId: string; betId: string }, void>(
+  functions,
+  'deleteBookBet',
+);
+
+/**
+ * Pull a bet back out of the Book: the key holder until "Book's in" goes out
+ * (before the real bets are placed), the Admin any time before grading.
+ */
+function DeleteBet({ seasonId, weekId, betId }: { seasonId: string; weekId: string; betId: string }) {
+  const [confirm, setConfirm] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  return (
+    <div className="flex flex-col items-end gap-1">
+      <div className="flex gap-3">
+        {confirm && !busy && (
+          <button
+            type="button"
+            onClick={() => setConfirm(false)}
+            className="min-h-11 px-2 text-sm text-vault-gold-soft/70 hover:text-vault-gold-soft"
+          >
+            Keep it
+          </button>
+        )}
+        <button
+          type="button"
+          disabled={busy}
+          onClick={async () => {
+            if (!confirm) {
+              setConfirm(true);
+              return;
+            }
+            setBusy(true);
+            setError(null);
+            try {
+              await deleteBookBet({ seasonId, weekId, betId });
+            } catch (err) {
+              setError(err instanceof Error ? err.message : String(err));
+              setConfirm(false);
+              setBusy(false);
+            }
+          }}
+          className="min-h-11 px-2 text-sm text-vault-loss/90 hover:text-vault-loss disabled:opacity-40"
+        >
+          {busy ? 'Deleting…' : confirm ? 'Tap again to delete' : 'Delete bet'}
+        </button>
+      </div>
+      {error && <ErrorBanner message={error} />}
     </div>
   );
 }
@@ -164,7 +220,7 @@ function AnnounceBook({
       <p className="text-sm text-vault-gold-soft/80">
         {betCount === 0
           ? "Place your bets, then let the crew know the Book's in."
-          : "Done placing bets? Let the crew know what's riding. You can only send this once."}
+          : "Done placing bets? Let the crew know what's riding. You can delete a bet until you send this, and it only goes once."}
       </p>
       <button
         type="button"

@@ -57,8 +57,13 @@ export async function submitPickLogic(db: Firestore, params: SubmitPickParams): 
     throw new HttpsError('failed-precondition', `${uid} has not paid their buy-in for ${weekId}.`);
   }
 
-  const now = Timestamp.now();
   const existing = pickSnap.data() as PickDoc | undefined;
+  // A resealed vault is for late picks only: everyone else has already seen the picks.
+  if (week.resealedAt && existing) {
+    throw new HttpsError('failed-precondition', 'Your pick was sealed before the vault reopened, so it is final.');
+  }
+
+  const now = Timestamp.now();
   // A reseal replaces the whole doc, so the old lineNow and alert go with it.
   const pick: PickDoc = {
     playerId: uid,

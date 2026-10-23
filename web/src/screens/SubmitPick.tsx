@@ -63,7 +63,9 @@ export default function SubmitPick() {
       ? `${COPY.vaultOpen}. Picks for ${weekLabel(week)} are final.`
       : now >= week.lockAt.toMillis()
         ? 'The vault just opened. Picks are final.'
-        : !buyIn?.paid
+        : week.resealedAt && pick
+          ? 'Your pick was sealed before the vault reopened, so it is final.'
+          : !buyIn?.paid
           ? `Your ${formatCents(week.buyInCents)} buy-in isn't marked paid yet. Once the Admin marks it, you can seal a pick.`
           : null;
 
@@ -96,7 +98,8 @@ export default function SubmitPick() {
     }
   }
 
-  const locked = week.status !== 'open';
+  // After a reseal for late picks, a pick already in shows as a final ticket.
+  const locked = week.status !== 'open' || Boolean(week.resealedAt && pick);
   const previewWinUnits = impliedUnits;
 
   return (
@@ -119,9 +122,11 @@ export default function SubmitPick() {
 
       {locked && pick ? (
         <div className="flex flex-col gap-3">
-          <PickTicket pick={pick} week={week} sealed={false} />
+          <PickTicket pick={pick} week={week} sealed={week.status === 'open'} />
           <p className="text-center text-xs text-vault-gold-soft/60">
-            {COPY.vaultOpen}. Your ticket can&apos;t change now.
+            {week.status === 'open'
+              ? 'The vault is resealed for late picks only. Your ticket is final.'
+              : `${COPY.vaultOpen}. Your ticket can't change now.`}
           </p>
         </div>
       ) : (

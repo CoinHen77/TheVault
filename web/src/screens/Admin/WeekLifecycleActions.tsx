@@ -8,10 +8,15 @@ import { COPY } from '../../lib/copy';
 import { functions } from '../../lib/firebase';
 import { formatCents, formatSharePrice, formatTimestampET, weekLabel } from '../../lib/format';
 import { keyDecisionReason } from '../../lib/keyDecision';
+import { toDatetimeLocal } from './WeekManager';
 
 const startGrading = httpsCallable<{ seasonId: string; weekId: string }, void>(functions, 'startGrading');
 const closeWeek = httpsCallable<{ seasonId: string; weekId: string }, unknown>(functions, 'closeWeek');
 const openVaultEarly = httpsCallable<{ seasonId: string; weekId: string }, void>(functions, 'openVaultEarly');
+const resealVault = httpsCallable<{ seasonId: string; weekId: string; lockAtMs: number }, { deletedBets: number }>(
+  functions,
+  'resealVault',
+);
 
 const STEPS: { status: WeekStatus; label: string }[] = [
   { status: 'open', label: COPY.weekStatus.open },
@@ -113,6 +118,12 @@ export default function WeekLifecycleActions({
 
       {error && <ErrorBanner message={error} />}
 
+      {week.status === 'open' && week.resealedAt && (
+        <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-400">
+          Resealed for late picks. Only paid players without a pick can seal one; everyone else&apos;s pick is final.
+        </p>
+      )}
+
       {week.status === 'open' && (
         <p className="text-sm text-vault-gold-soft/70">
           The vault opens by itself at <span className="text-vault-gold-soft">{formatTimestampET(week.lockAt)}</span>.
@@ -162,6 +173,7 @@ export default function WeekLifecycleActions({
           <PrimaryButton disabled={submitting} onClick={() => void run(startGrading)}>
             {submitting ? 'Starting…' : 'Start grading'}
           </PrimaryButton>
+          <ResealVault seasonId={seasonId} weekId={week.id} betCount={bets?.length ?? 0} />
         </>
       )}
 
@@ -211,5 +223,92 @@ function PrimaryButton({ disabled, onClick, children }: { disabled: boolean; onC
     >
       {children}
     </button>
+  );
+}
+
+/**
+ * Admin: put an open vault back to taking picks until a new deadline, so a
+ * late player can pay in and seal a pick. Picks already sealed stay final and
+ * the Book's bets are deleted (resealVault). Two taps, like opening early.
+ */
+function ResealVault({ seasonId, weekId, betCount }: { seasonId: string; weekId: string; betCount: number }) {
+  const [open, setOpen] = useState(false);
+  const [lockAtInput, setLockAtInput] = useState('');
+  const [confirm, setConfirm] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const lockAtMs = lockAtInput ? new Date(lockAtInput).getTime() : NaN;
+  const valid = Number.isFinite(lockAtMs) && lockAtMs > Date.now();
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => {
+          setLockAtInput(toDatetimeLocal(Date.now() + 60 * 60 * 1000));
+          setOpen(true);
+        }}
+        className="min-h-11 text-sm text-vault-gold-soft/70 underline-offset-2 hover:text-vault-gold-soft hover:underline"
+      >
+        {COPY.resealVault}
+      </button>
+    );
+  }
+
+  async function submit() {
+    setSubmitting(true);
+    setError(null);
+    try {
+      await resealVault({ seasonId, weekId, lockAtMs });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+      setConfirm(false);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-3 rounded-xl border border-vault-line bg-vault-black/30 p-3">
+      <p className="text-sm text-vault-gold-soft/80">
+        Takes picks again until the new deadline, so late players can pay in and seal one. Picks already in stay final and
+        are hidden again until the vault reopens.
+        {betCount > 0 && (
+          <span className="text-amber-400">
+            {' '}
+            The {betCount} Book bet{betCount === 1 ? '' : 's'} will be deleted; the {COPY.bookholder} places them again
+            after.
+          </span>
+        )}
+      </p>
+      <label className="flex flex-col gap-1 text-[11px] font-medium uppercase tracking-[0.12em] text-vault-gold-soft/60">
+        New deadline
+        <input
+          type="datetime-local"
+          value={lockAtInput}
+          onChange={(e) => {
+            setLockAtInput(e.target.value);
+            setConfirm(false);
+          }}
+          className="min-h-11 rounded-lg border border-vault-steel-700 bg-vault-black/40 px-3 py-2.5 font-mono text-base normal-case tracking-normal text-vault-gold-soft outline-none focus:border-vault-gold/60"
+        />
+      </label>
+      {!valid && lockAtInput && <p className="text-xs text-vault-loss">The new deadline has to be in the future.</p>}
+      {error && <ErrorBanner message={error} />}
+      <PrimaryButton disabled={submitting || !valid} onClick={() => (confirm ? void submit() : setConfirm(true))}>
+        {submitting ? 'Resealing…' : confirm ? 'Tap again to reseal' : 'Reseal the vault'}
+      </PrimaryButton>
+      <button
+        type="button"
+        onClick={() => {
+          setOpen(false);
+          setConfirm(false);
+        }}
+        className="min-h-11 text-sm text-vault-gold-soft/70 hover:text-vault-gold-soft"
+      >
+        Cancel
+      </button>
+    </div>
   );
 }

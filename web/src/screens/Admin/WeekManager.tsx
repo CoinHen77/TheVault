@@ -28,7 +28,7 @@ const updateWeek = httpsCallable<
 >(functions, 'updateWeek');
 
 /** `<input type="datetime-local">` works in the browser's local time; Zach and the group operate in America/New_York. */
-function toDatetimeLocal(ms: number): string {
+export function toDatetimeLocal(ms: number): string {
   const d = new Date(ms);
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;

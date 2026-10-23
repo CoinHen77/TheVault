@@ -1,7 +1,7 @@
-import { Timestamp, type DocumentReference, type Firestore, type Transaction } from 'firebase-admin/firestore';
+import { FieldValue, Timestamp, type DocumentReference, type Firestore, type Transaction } from 'firebase-admin/firestore';
 import { HttpsError } from 'firebase-functions/v2/https';
 import { bookCapCents, withSeasonDefaults, type Season, type Week } from '@vault/shared';
-import { buyInsCol, picksCol, seasonDoc, weekDoc } from '../paths.js';
+import { bookBetsCol, buyInsCol, picksCol, seasonDoc, weekDoc } from '../paths.js';
 
 /**
  * SPEC.md §4 "locked": snapshots openingVaultCents and bookCapCents from the
@@ -97,5 +97,46 @@ export async function openVaultEarlyLogic(db: Firestore, params: { seasonId: unk
     }
 
     lockWeekInTx(tx, weekRef, seasonSnap.data() as Season);
+  });
+}
+
+/**
+ * Admin "reseal the vault": puts a locked week back to open so late players
+ * can pay in and seal a pick before a new lockAt. Picks already sealed stay
+ * final (submitPick checks resealedAt). Any Book bets are deleted and the
+ * "Book's in" flag and pick reminders are reset; the next lock re-snapshots
+ * openingVaultCents and bookCapCents as usual.
+ */
+export async function resealVaultLogic(
+  db: Firestore,
+  params: { seasonId: unknown; weekId: unknown; lockAtMs: unknown; nowMs?: number },
+): Promise<{ deletedBets: number }> {
+  const { seasonId, weekId, lockAtMs } = params;
+  const nowMs = params.nowMs ?? Date.now();
+  if (typeof seasonId !== 'string' || !seasonId || typeof weekId !== 'string' || !weekId) {
+    throw new HttpsError('invalid-argument', 'seasonId and weekId are required.');
+  }
+  if (typeof lockAtMs !== 'number' || !Number.isInteger(lockAtMs)) {
+    throw new HttpsError('invalid-argument', 'lockAtMs must be a timestamp in milliseconds.');
+  }
+  if (lockAtMs <= nowMs) throw new HttpsError('invalid-argument', 'The new deadline has to be in the future.');
+  const weekRef = weekDoc(db, seasonId, weekId);
+
+  return db.runTransaction(async (tx) => {
+    const [weekSnap, betsSnap] = await Promise.all([tx.get(weekRef), tx.get(bookBetsCol(db, seasonId, weekId))]);
+    if (!weekSnap.exists) throw new HttpsError('not-found', `Week ${weekId} not found.`);
+    const week = weekSnap.data() as Week;
+    if (week.status !== 'locked') {
+      throw new HttpsError('failed-precondition', `Week ${weekId} is ${week.status}; only an open vault can be resealed.`);
+    }
+    for (const bet of betsSnap.docs) tx.delete(bet.ref);
+    tx.update(weekRef, {
+      status: 'open',
+      lockAt: Timestamp.fromMillis(lockAtMs),
+      resealedAt: Timestamp.fromMillis(nowMs),
+      bookAnnouncedAt: FieldValue.delete(),
+      remindersSent: FieldValue.delete(),
+    });
+    return { deletedBets: betsSnap.size };
   });
 }

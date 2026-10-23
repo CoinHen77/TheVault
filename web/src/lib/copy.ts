@@ -34,6 +34,7 @@ export const COPY = {
   oddsBoard: 'The board',
   oddsBoardHint: 'DraftKings lines. Tap one to fill your ticket, then edit anything you like.',
   openVaultEarly: 'Open the vault early',
+  resealVault: 'Reseal the vault for late picks',
 
   // Week status badges, by data status
   weekStatus: {

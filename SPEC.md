@@ -163,6 +163,7 @@ seasons/{seasonId}/weeks/{weekId}   // weekId e.g. "W04", "WC", "DIV", "CONF", "
   closedAt: Timestamp
   remindersSent?: { eve?: boolean, lastCall?: boolean }  // push reminders already sent (server-only)
   bookAnnouncedAt?: Timestamp  // key holder tapped "Book's in" (server-only, once)
+  resealedAt?: Timestamp       // Admin last resealed the vault for late picks (server-only)
 
 seasons/{seasonId}/weeks/{weekId}/buyIns/{uid}
   amountCents: number
@@ -238,7 +239,11 @@ seasons/{seasonId}/standings/{uid}   // maintained by functions; read-only to cl
 
 ```
 open ──(lockAt reached, or Admin opens early)──▶ locked ──(admin starts grading)──▶ grading ──(admin closes)──▶ closed
+  ▲                                                  │
+  └──────────(Admin reseals for late picks)──────────┘
 ```
+
+- **Resealed (locked → open):** the Admin can put a `locked` week back to `open` with a new `lockAt`, so a late player can pay in and seal a pick. Picks already sealed stay final; only paid players without a pick can seal. The week's book bets are deleted and `bookAnnouncedAt` is cleared. The next lock re-snapshots `openingVaultCents` and `bookCapCents` as usual.
 
 - **open**
   - The Admin marks buy-ins paid.
@@ -275,8 +280,9 @@ All functions are callable (HTTPS onCall) unless noted. Each function checks aut
 | `adjustPickAtOpen` | Admin | While the week is `locked`: sets a pick's `pickText` and `americanOdds` to its vault-open line, keeping the original in `sealed` (first time only) and recording `priceAdjustedBy` (§1.3) |
 | `lockDueWeeks` | Scheduled (every 5 min) | For weeks with `status=open` and `lockAt<=now`, sets `locked`, `openingVaultCents` = season `vaultCents`, and `bookCapCents = floor(opening × 0.25)`. The same run sends seal-your-pick push reminders 20 h and 1 h before `lockAt` to paid players without a pick |
 | `openVaultEarly` | Admin | Locks an `open` week before `lockAt` with the same snapshot as `lockDueWeeks`. Fails unless at least one buy-in is paid and every paid player has a pick. Leaves `lockAt` unchanged |
+| `resealVault` | Admin | `locked` → `open` with a new future `lockAt`: deletes the week's book bets, clears `bookAnnouncedAt` and `remindersSent`, and sets `resealedAt`. While `resealedAt` is set, `submitPick` rejects players who already have a pick |
 | `placeBookBet` | Bookholder | Validates the week is `locked`, every leg is a pick in this week, stake > 0, and the sum of stakes ≤ `bookCapCents`; records the ticket odds and default payout |
-| `updateBookBet` / `deleteBookBet` | Bookholder or Admin | Allowed only while the week is `locked` |
+| `updateBookBet` / `deleteBookBet` | Bookholder or Admin | Allowed only while the week is `locked`. Once `bookAnnouncedAt` is set, only the Admin can delete a bet |
 | `startGrading` | Admin | `locked` → `grading` |
 | `gradePick` | Admin | Sets the result and computes `units` |
 | `gradeBookBet` | Admin | Sets the result, optionally overrides payout, and computes `netCents` |

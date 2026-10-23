@@ -66,7 +66,9 @@ export async function refreshPickLinesLogic(
           checkedAt,
         };
         const move = lineMove({ odds: pick.americanOdds, point: pick.line.point }, found.line);
-        const sendAlert = canAlert && move.significant && !pick.lineAlertedAt;
+        // After a reseal, picks sealed before it are final, so a move alert is no use to them.
+        const final = week.resealedAt !== undefined && pick.updatedAt.toMillis() <= week.resealedAt.toMillis();
+        const sendAlert = canAlert && !final && move.significant && !pick.lineAlertedAt;
         tx.update(ref, sendAlert ? { lineNow, lineAlertedAt: checkedAt } : { lineNow });
         updated += 1;
         if (!sendAlert) return null;
