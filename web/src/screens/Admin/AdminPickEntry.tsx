@@ -1,6 +1,6 @@
 import { httpsCallable } from 'firebase/functions';
 import { useEffect, useState } from 'react';
-import { isValidAmericanOdds } from '@vault/shared';
+import { isSamePick, isValidAmericanOdds } from '@vault/shared';
 import type { Pick as PickDoc, Player, Week } from '@vault/shared';
 import { Card, EmptyState, ErrorBanner, Field, inputClass } from '../../components/ui';
 import { useBuyIns } from '../../hooks/useWeekData';
@@ -62,6 +62,11 @@ export default function AdminPickEntry({
   const odds = parseOddsInput(oddsInput);
   const oddsValid = oddsInput.trim() !== '' && isValidAmericanOdds(odds);
   const canSubmit = playerId !== '' && gameText.trim() !== '' && pickText.trim() !== '' && oddsValid && !submitting;
+  // The Admin can read every pick, so this check runs here rather than in adminSubmitPick.
+  const duplicateOf =
+    pickText.trim() === ''
+      ? []
+      : (picks ?? []).filter((p) => p.id !== playerId && isSamePick({ pickText }, p)).map((p) => p.id);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -123,6 +128,11 @@ export default function AdminPickEntry({
             className={inputClass}
           />
         </Field>
+        {duplicateOf.length > 0 && (
+          <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-400">
+            Duplicate: {duplicateOf.map((uid) => players[uid]?.displayName ?? uid).join(', ')} already sealed this pick.
+          </p>
+        )}
         {error && <ErrorBanner message={error} />}
         {success && <p className="text-sm text-vault-win">Saved.</p>}
         <button
@@ -131,6 +141,7 @@ export default function AdminPickEntry({
           className="rounded-lg bg-vault-gold px-4 py-3 text-sm font-semibold text-vault-black transition hover:bg-vault-gold-soft disabled:opacity-40"
         >
           {existing ? 'Update pick' : 'Save pick'}
+          {duplicateOf.length > 0 ? ' anyway' : ''}
         </button>
       </form>
     </Card>

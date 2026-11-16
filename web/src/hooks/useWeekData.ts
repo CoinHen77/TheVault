@@ -1,4 +1,4 @@
-import type { BookBet, BuyIn, Pick, Preload, Standing, Week } from '@vault/shared';
+import type { BookBet, BuyIn, LedgerEntry, Pick, Preload, Standing, Week } from '@vault/shared';
 import { useCollectionData } from './useCollectionData';
 import { useDocData } from './useDocData';
 
@@ -53,4 +53,10 @@ export function usePicks(seasonId: string | null, weekId: string | null, enabled
 export function useBookBets(seasonId: string | null, weekId: string | null, enabled: boolean) {
   const path = seasonId && weekId ? `seasons/${seasonId}/weeks/${weekId}/bookBets` : null;
   return useCollectionData<BookBet>(path, enabled);
+}
+
+/** The season ledger, readable to any signed-in player (SPEC.md §6). Used for the paid-in total. */
+export function useLedger(seasonId: string | null) {
+  const path = seasonId ? `seasons/${seasonId}/ledger` : null;
+  return useCollectionData<LedgerEntry>(path);
 }

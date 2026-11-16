@@ -1,4 +1,4 @@
-import { httpsCallable } from 'firebase/functions';
+import { FunctionsError, httpsCallable } from 'firebase/functions';
 import { useEffect, useState } from 'react';
 import {
   ODDS_FEED_DOC_IDS,
@@ -26,9 +26,26 @@ import { COPY } from '../lib/copy';
 import { formatCents, formatOdds, formatTimestampET, formatUnits, parseOddsInput, weekLabel } from '../lib/format';
 
 const submitPick = httpsCallable<
-  { seasonId: string; weekId: string; pickText: string; gameText: string; americanOdds: number; line?: PickLine },
+  {
+    seasonId: string;
+    weekId: string;
+    pickText: string;
+    gameText: string;
+    americanOdds: number;
+    line?: PickLine;
+    allowDuplicate?: boolean;
+  },
   void
 >(functions, 'submitPick');
+
+/** submitPick turned the seal down because another player already sealed this pick (functions/src/logic/picks.ts). */
+function isDuplicatePickError(err: unknown): boolean {
+  return (
+    err instanceof FunctionsError &&
+    err.code === 'functions/already-exists' &&
+    (err.details as { reason?: unknown } | undefined)?.reason === 'duplicate-pick'
+  );
+}
 
 export default function SubmitPick() {
   const { user } = useAuth();
@@ -44,6 +61,12 @@ export default function SubmitPick() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  /** The last seal was a duplicate; the player can seal it anyway or change it. */
+  const [duplicate, setDuplicate] = useState(false);
+
+  useEffect(() => {
+    setDuplicate(false);
+  }, [gameText, pickText, oddsInput, line]);
 
   useEffect(() => {
     if (!pick) return;
@@ -75,12 +98,12 @@ export default function SubmitPick() {
 
   const canSubmit = !disabledReason && gameText.trim() && pickText.trim() && oddsValid && !submitting;
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function seal(allowDuplicate: boolean) {
     if (!season || !week || !canSubmit) return;
     setSubmitting(true);
     setError(null);
     setSuccess(false);
+    setDuplicate(false);
     try {
       await submitPick({
         seasonId: season.id,
@@ -89,13 +112,20 @@ export default function SubmitPick() {
         pickText: pickText.trim(),
         americanOdds: odds,
         ...(line ? { line } : {}),
+        ...(allowDuplicate ? { allowDuplicate } : {}),
       });
       setSuccess(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      if (isDuplicatePickError(err)) setDuplicate(true);
+      else setError(err instanceof Error ? err.message : String(err));
     } finally {
       setSubmitting(false);
     }
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    void seal(false);
   }
 
   // After a reseal for late picks, a pick already in shows as a final ticket.
@@ -131,7 +161,7 @@ export default function SubmitPick() {
         </div>
       ) : (
         <div className="grid gap-5 md:grid-cols-2 md:items-start">
-          <form className="flex flex-col gap-3" onSubmit={(e) => void handleSubmit(e)}>
+          <form className="flex flex-col gap-3" onSubmit={handleSubmit}>
             <p className="text-xs text-vault-gold-soft/60">
               One Best Bet per week. The vault opens {formatTimestampET(week.lockAt)}; only games starting after that count
               (honor system). Picks from the board are priced at the DraftKings line when the vault opens.
@@ -144,7 +174,8 @@ export default function SubmitPick() {
                   setError(null);
                   setSuccess(false);
                   try {
-                    await submitPick({ seasonId: season.id, weekId: week.id, ...next });
+                    // Same side they already sealed, so no duplicate warning.
+                    await submitPick({ seasonId: season.id, weekId: week.id, ...next, allowDuplicate: true });
                     setSuccess(true);
                   } catch (err) {
                     setError(err instanceof Error ? err.message : String(err));
@@ -221,9 +252,27 @@ export default function SubmitPick() {
             {error && <ErrorBanner message={error} />}
             {success && <p className="text-sm text-vault-win">{COPY.sealedNote}</p>}
 
+            {duplicate && (
+              <section
+                role="alert"
+                className="flex flex-col gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2.5 text-sm text-amber-300"
+              >
+                <p className="font-semibold">{COPY.duplicatePick}</p>
+                <p className="text-xs opacity-80">{COPY.duplicatePickHint}</p>
+                <button
+                  type="button"
+                  disabled={!canSubmit}
+                  onClick={() => void seal(true)}
+                  className="min-h-11 rounded-lg border border-vault-gold/60 px-3 text-sm font-semibold text-vault-gold transition hover:bg-vault-gold/10 disabled:opacity-40"
+                >
+                  {submitting ? 'Sealing…' : COPY.sealAnyway}
+                </button>
+              </section>
+            )}
+
             <button
               type="submit"
-              disabled={!canSubmit}
+              disabled={!canSubmit || duplicate}
               className="mt-1 flex min-h-11 items-center justify-center gap-2 rounded-lg bg-vault-gold px-4 text-sm font-semibold text-vault-black transition hover:bg-vault-gold-soft disabled:opacity-40"
             >
               <WaxSeal size={20} decorative />

@@ -22,7 +22,7 @@ async function pay(uid: string) {
   await markBuyInPaidLogic(db, { ...W, playerId: uid, markedBy: 'admin' });
 }
 
-function seal(uid: string, pickText = 'x') {
+function seal(uid: string, pickText = `${uid} pick`) {
   return submitPickLogic(db, { ...W, uid, pickText, gameText: 'y', americanOdds: -110 });
 }
 

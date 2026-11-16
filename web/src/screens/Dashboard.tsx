@@ -1,4 +1,4 @@
-import type { BookBet, Comment, Pick as PickDoc, Player, Week } from '@vault/shared';
+import { paidInCents, type BookBet, type Comment, type Pick as PickDoc, type Player, type Week } from '@vault/shared';
 import { useAuth } from '../auth/AuthProvider';
 import Countdown from '../components/Countdown';
 import BetTicket from '../components/heist/BetTicket';
@@ -12,7 +12,16 @@ import { EmptyState, WeekStatusPill } from '../components/ui';
 import { useComments } from '../hooks/useComments';
 import { useNow } from '../hooks/useNow';
 import { useVaultData } from '../hooks/VaultDataProvider';
-import { useBookBets, useBuyIns, useMyBuyIn, useMyPick, usePicks, useStandings, useWeeks } from '../hooks/useWeekData';
+import {
+  useBookBets,
+  useBuyIns,
+  useLedger,
+  useMyBuyIn,
+  useMyPick,
+  usePicks,
+  useStandings,
+  useWeeks,
+} from '../hooks/useWeekData';
 import { COPY } from '../lib/copy';
 import {
   formatCents,
@@ -52,6 +61,7 @@ export default function Dashboard({ onNavigate }: { onNavigate: (tab: Tab) => vo
   const { data: bets } = useBookBets(seasonId, weekId, Boolean(week) && !isOpen);
   const { data: standings } = useStandings(seasonId);
   const { data: weeks } = useWeeks(seasonId);
+  const { data: ledger } = useLedger(seasonId);
   const lastClosed = weeks?.filter((w) => w.status === 'closed' && w.id !== weekId).at(-1) ?? null;
   const { data: lastPicks } = usePicks(seasonId, lastClosed?.id ?? null, Boolean(lastClosed));
   const { data: lastBets } = useBookBets(seasonId, lastClosed?.id ?? null, Boolean(lastClosed));
@@ -131,6 +141,23 @@ export default function Dashboard({ onNavigate }: { onNavigate: (tab: Tab) => vo
               </p>
             </div>
           </section>
+
+          {ledger && (
+            <PaidInVs
+              title={COPY.theCrew}
+              paidInCents={paidInCents(ledger)}
+              valueLabel={COPY.inTheVault}
+              valueCents={season.vaultCents}
+            />
+          )}
+          {ledger && myStanding && (
+            <PaidInVs
+              title={COPY.you}
+              paidInCents={paidInCents(ledger.filter((e) => e.playerId === uid))}
+              valueLabel={COPY.yourCut}
+              valueCents={myValueCents}
+            />
+          )}
 
           {myStanding && (
             <p className="text-xs text-vault-gold-soft/60">
@@ -298,6 +325,47 @@ function YourMove({ move, onNavigate }: { move: Move; onNavigate: (tab: Tab) => 
           <Icon name="arrowRight" className="h-4 w-4" />
         </button>
       )}
+    </section>
+  );
+}
+
+/**
+ * Everything paid in this season against what it's worth now: for the crew,
+ * the whole Vault; for you, your cut (shares × share price).
+ */
+function PaidInVs({
+  title,
+  paidInCents,
+  valueLabel,
+  valueCents,
+}: {
+  title: string;
+  paidInCents: number;
+  valueLabel: string;
+  valueCents: number;
+}) {
+  const diffCents = valueCents - paidInCents;
+  const tone = diffCents > 0 ? 'text-vault-win' : diffCents < 0 ? 'text-vault-loss' : 'text-vault-gold-soft/80';
+  const border = diffCents > 0 ? 'border-vault-win/40' : diffCents < 0 ? 'border-vault-loss/40' : 'border-vault-line';
+  const label = diffCents > 0 ? COPY.inTheBlack : diffCents < 0 ? COPY.inTheRed : COPY.breakingEven;
+  return (
+    <section className={`flex flex-col gap-1.5 rounded-xl border ${border} bg-vault-panel px-3 py-3 text-sm`}>
+      <SectionTitle>{title}</SectionTitle>
+      <div className="flex items-center justify-between">
+        <span className="text-vault-gold-soft/60">{COPY.paidIn}</span>
+        <span className="font-mono text-vault-gold-soft">{formatCents(paidInCents)}</span>
+      </div>
+      <div className="flex items-center justify-between">
+        <span className="text-vault-gold-soft/60">{valueLabel}</span>
+        <span className="font-mono text-vault-gold-soft">{formatCents(valueCents)}</span>
+      </div>
+      <div className={`flex items-center justify-between border-t border-vault-line pt-1.5 font-semibold ${tone}`}>
+        <span>{label}</span>
+        <span className="font-mono">
+          {diffCents > 0 ? '+' : ''}
+          {formatCents(diffCents)}
+        </span>
+      </div>
     </section>
   );
 }

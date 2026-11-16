@@ -1,10 +1,11 @@
+import { projectedPayouts } from '@vault/shared';
 import { useAuth } from '../auth/AuthProvider';
 import Podium from '../components/heist/Podium';
 import { EmptyState } from '../components/ui';
 import { useVaultData } from '../hooks/VaultDataProvider';
 import { useStandings } from '../hooks/useWeekData';
 import { COPY } from '../lib/copy';
-import { formatUnits } from '../lib/format';
+import { formatCents, formatUnits } from '../lib/format';
 
 /** Gold, silver and bronze rank rings for the top 3 (SPEC.md §7). */
 const MEDAL_CLASS = [
@@ -24,6 +25,8 @@ export default function Standings() {
   }
 
   const rows = standings ?? [];
+  const payouts = projectedPayouts(rows, season.vaultCents, season.totalShares, season.sharpPct);
+  const sharpLabel = `${Math.round(season.sharpPct * 100)}%`;
 
   return (
     <div className="flex flex-col gap-5">
@@ -64,17 +67,31 @@ export default function Standings() {
                   · {s.weeksBoughtIn} {s.weeksBoughtIn === 1 ? 'week' : 'weeks'} bought in
                 </p>
               </div>
-              <span
-                className={`font-mono text-sm ${s.units > 0 ? 'text-vault-win' : s.units < 0 ? 'text-vault-loss' : 'text-vault-gold-soft/60'}`}
-              >
-                {formatUnits(s.units)}
-              </span>
+              <div className="flex flex-col items-end">
+                <span
+                  className={`font-mono text-sm ${s.units > 0 ? 'text-vault-win' : s.units < 0 ? 'text-vault-loss' : 'text-vault-gold-soft/60'}`}
+                >
+                  {formatUnits(s.units)}
+                </span>
+                {payouts[s.id] && (
+                  <span className="font-mono text-xs text-vault-gold">
+                    {formatCents(payouts[s.id]!.totalCents)}
+                    {payouts[s.id]!.sharpCents > 0 && (
+                      <span className="font-sans text-vault-gold-soft/55"> incl. {sharpLabel}</span>
+                    )}
+                  </span>
+                )}
+              </div>
             </li>
           ))}
         </ol>
       )}
 
       <p className="text-center text-xs text-vault-gold-soft/55">Units: flat 1u risk per pick. A push counts as 0.</p>
+      <p className="text-center text-xs text-vault-gold-soft/55">
+        {COPY.payoutToday}: each player's share of the Vault if the season ended now, with the {sharpLabel} Sharp cut going to
+        the unit leader (split while tied). It moves every week with buy-ins and the Book.
+      </p>
     </div>
   );
 }

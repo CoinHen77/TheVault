@@ -47,7 +47,7 @@ async function pick(uid: string): Promise<PickDoc> {
 
 /** `line: null` seals it as if typed in by hand. */
 async function sealBears(uid: string, odds = -110, line: PickLine | null = BEARS) {
-  await submitPickLogic(db, { ...W, uid, pickText: 'Bears -2.5', gameText: 'CHI @ CAR', americanOdds: odds, line });
+  await submitPickLogic(db, { ...W, uid, pickText: 'Bears -2.5', gameText: 'CHI @ CAR', americanOdds: odds, line, allowDuplicate: true });
 }
 
 let lockAtMs: number;

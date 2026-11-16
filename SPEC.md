@@ -26,6 +26,7 @@ A mobile-first web app for a private friend group's weekly NFL "Best Bet" pool. 
 - Picks lock at **4:00 PM America/New_York on Friday** of that NFL week. Only games starting at or after 4:00 PM ET Friday are eligible, so Thursday Night Football is out and Monday Night Football is in. Eligibility is on the honor system in v1; the text of the pick is free-form.
 - Once every paid player has submitted a pick, the Admin may **open the vault early**: the week locks right away, before the odds move toward the weekend. The Friday 4:00 PM eligibility cutoff still applies.
 - Picks are hidden from other players until the week locks.
+- **Duplicate picks** (added 2026-11-16). Two players may seal the same pick, but the second one is warned before sealing and has to confirm. The warning says only that someone already has it, never who. Board picks match on the same game and side at any line (Bears −2.5 and Bears −3 match). Typed picks match on their text, ignoring case and spacing. The Admin entering a pick in the Control room gets the same warning, with names.
 
 ### 1.2 Grading and units (The Sharp)
 - Every pick from a paying player is graded **win / loss / push** by the Admin. This applies whether or not the Book used the pick.
@@ -275,7 +276,7 @@ All functions are callable (HTTPS onCall) unless noted. Each function checks aut
 | `createWeek` | Admin | Creates the next week with type, buy-in and lockAt; sets `sharePriceAtOpen` = season `sharePrice` |
 | `markBuyInPaid` | Admin | In a transaction, validates the week is `open` and the player is not already paid, issues `shares = amountCents/100 / sharePriceAtOpen`, increments season `totalShares`, `vaultCents` and the player's standings `shares` and `weeksBoughtIn`, and writes a `buy_in` ledger entry |
 | `unmarkBuyIn` | Admin | Reverses the above while the week is `open`; also deletes the player's pick |
-| `submitPick` | Player | Validates the week is `open`, the buy-in is paid, now < lockAt, and the odds are valid; upserts `picks/{uid}`. Accepts an optional odds-board `line`; a reseal clears `lineNow` and `lineAlertedAt` |
+| `submitPick` | Player | Validates the week is `open`, the buy-in is paid, now < lockAt, and the odds are valid; upserts `picks/{uid}`. Accepts an optional odds-board `line`; a reseal clears `lineNow` and `lineAlertedAt`. Rejects a pick another player already sealed (§1.1 duplicate picks) with `already-exists` and `details.reason = "duplicate-pick"`, unless called with `allowDuplicate: true` |
 | `adminSubmitPick` | Admin | Enters or edits a pick on a paid player's behalf. Allowed in any status except `closed`, so picks collected offline (e.g. in the group chat) can be entered after lock. Records `enteredBy` on the pick doc |
 | `adjustPickAtOpen` | Admin | While the week is `locked`: sets a pick's `pickText` and `americanOdds` to its vault-open line, keeping the original in `sealed` (first time only) and recording `priceAdjustedBy` (§1.3) |
 | `lockDueWeeks` | Scheduled (every 5 min) | For weeks with `status=open` and `lockAt<=now`, sets `locked`, `openingVaultCents` = season `vaultCents`, and `bookCapCents = floor(opening × 0.25)`. The same run sends seal-your-pick push reminders 20 h and 1 h before `lockAt` to paid players without a pick |
@@ -330,6 +331,7 @@ All functions are callable (HTTPS onCall) unless noted. Each function checks aut
    - Vault balance, share price and the change from last week.
    - Your shares and their current value.
    - Current week: status, lock countdown, Bookholder, your buy-in status, your pick.
+   - Paid in vs. the Vault (added 2026-11-16): the season's total buy-ins and preloads (from the ledger, net of unmarks) against `vaultCents`, labeled in the black or in the red. A second card does the same for you: your own buy-ins and preloads against your cut (shares × share price).
 2. **Submit Pick**
    - Fields: game, pick text and American odds, with live display of implied units if it wins.
    - Disabled with an explanation if you're not paid or the week is locked.
@@ -339,6 +341,7 @@ All functions are callable (HTTPS onCall) unless noted. Each function checks aut
 4. **Sharp Standings**
    - Rank, player, W-L-P, units (green/red) and weeks bought in.
    - Top 3 get medals.
+   - Payout today (added 2026-11-16): what each player would get if the season ended now, per §1.6: their share of the 90% Group Vault, plus the 10% Sharp award for the unit leader. While the lead is tied, the award is split evenly for display only; `finalizeSeason` still makes the Admin settle a real tie.
 5. **The Book** (the Bookholder can act; everyone can view)
    - Cap remaining.
    - Bet builder: select legs from this week's picks, then enter stake, ticket odds and an optional exact payout.

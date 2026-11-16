@@ -26,6 +26,9 @@ export const COPY = {
   resealPick: 'Reseal it',
   sealed: 'Sealed',
   sealedNote: 'Sealed. Nobody sees it until the vault opens.',
+  duplicatePick: 'Someone in the crew already sealed this pick.',
+  duplicatePickHint: "You can still seal it. You'll both be graded on it as usual.",
+  sealAnyway: 'Seal it anyway',
   waiting: 'Waiting',
   envelopes: 'Envelopes',
   envelopesIn: 'Envelopes in',
@@ -52,6 +55,13 @@ export const COPY = {
   opensIn: 'Opens in',
   vaultOpensAt: 'Vault opens at',
   inTheVault: 'In the vault',
+  paidIn: 'Paid in',
+  theCrew: 'The crew',
+  you: 'You',
+  inTheBlack: 'In the black',
+  inTheRed: 'In the red',
+  breakingEven: 'Even',
+  payoutToday: 'Payout today',
   yourCut: 'Your cut',
 
   // The Book / key

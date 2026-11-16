@@ -2,13 +2,14 @@ import { FieldValue, Timestamp, type Firestore } from 'firebase-admin/firestore'
 import { HttpsError } from 'firebase-functions/v2/https';
 import {
   isPickLine,
+  isSamePick,
   isValidAmericanOdds,
   unitsForPick,
   type BuyIn,
   type Pick as PickDoc,
   type Week,
 } from '@vault/shared';
-import { buyInDoc, pickDoc, weekDoc } from '../paths.js';
+import { buyInDoc, pickDoc, picksCol, weekDoc } from '../paths.js';
 
 function assertValidOdds(odds: number): void {
   if (!isValidAmericanOdds(odds)) {
@@ -25,13 +26,22 @@ export interface SubmitPickParams {
   americanOdds: number;
   /** The odds-board line it was sealed from, if any (see lineMove.ts). */
   line?: unknown;
+  /** The player saw the duplicate warning and is sealing it anyway. */
+  allowDuplicate?: unknown;
   /** Injectable for tests; defaults to the real clock. */
   nowMs?: number;
 }
 
-/** SPEC.md §5 submitPick: guards from §9.3 (unpaid, after lock, bad odds). */
+/** Error details when `submitPick` turns down a duplicate; the client asks, then retries with `allowDuplicate`. */
+export const DUPLICATE_PICK_REASON = 'duplicate-pick';
+
+/**
+ * SPEC.md §5 submitPick: guards from §9.3 (unpaid, after lock, bad odds).
+ * Sealing a pick another player already sealed is rejected unless
+ * `allowDuplicate` is true. The error never says who has it.
+ */
 export async function submitPickLogic(db: Firestore, params: SubmitPickParams): Promise<void> {
-  const { seasonId, weekId, uid, pickText, gameText, americanOdds, line, nowMs = Date.now() } = params;
+  const { seasonId, weekId, uid, pickText, gameText, americanOdds, line, allowDuplicate, nowMs = Date.now() } = params;
   assertValidOdds(americanOdds);
   if (line !== undefined && line !== null && !isPickLine(line)) {
     throw new HttpsError('invalid-argument', 'line is not a valid odds-board line.');
@@ -61,6 +71,16 @@ export async function submitPickLogic(db: Firestore, params: SubmitPickParams): 
   // A resealed vault is for late picks only: everyone else has already seen the picks.
   if (week.resealedAt && existing) {
     throw new HttpsError('failed-precondition', 'Your pick was sealed before the vault reopened, so it is final.');
+  }
+
+  if (allowDuplicate !== true) {
+    const others = (await picksCol(db, seasonId, weekId).get()).docs.filter((d) => d.id !== uid);
+    const mine = { pickText, ...(isPickLine(line) ? { line } : {}) };
+    if (others.some((d) => isSamePick(mine, d.data() as PickDoc))) {
+      throw new HttpsError('already-exists', 'Someone in the crew already sealed this pick.', {
+        reason: DUPLICATE_PICK_REASON,
+      });
+    }
   }
 
   const now = Timestamp.now();

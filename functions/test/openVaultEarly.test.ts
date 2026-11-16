@@ -20,7 +20,7 @@ describe('openVaultEarlyLogic', () => {
   async function payAndPick(uid: string, pick = true) {
     await markBuyInPaidLogic(db, { seasonId: SEASON_ID, weekId: 'W04', playerId: uid, markedBy: 'admin' });
     if (pick) {
-      await submitPickLogic(db, { seasonId: SEASON_ID, weekId: 'W04', uid, pickText: 'x', gameText: 'y', americanOdds: -110 });
+      await submitPickLogic(db, { seasonId: SEASON_ID, weekId: 'W04', uid, pickText: `${uid} pick`, gameText: 'y', americanOdds: -110 });
     }
   }
 
