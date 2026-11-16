@@ -4,10 +4,10 @@
   "version": "0.1.1",
   "main": "lib/index.js",
   "engines": {
-    "node": "20"
+    "node": "22"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json --noEmit && esbuild src/index.ts --bundle --platform=node --target=node20 --format=cjs --sourcemap --external:firebase-admin --external:firebase-functions --outfile=lib/index.js",
+    "build": "tsc -p tsconfig.json --noEmit && esbuild src/index.ts --bundle --platform=node --target=node22 --format=cjs --sourcemap --external:firebase-admin --external:firebase-functions --outfile=lib/index.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",

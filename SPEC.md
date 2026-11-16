@@ -101,7 +101,7 @@ The Admin can manually override the Bookholder. Every override is logged.
 - **Frontend:** React + TypeScript + Vite. Tailwind for styling. Installable PWA; the design is mobile-first.
 - **Auth:** Firebase Auth using email link or Google sign-in. `admin: true` is a custom claim.
 - **Database:** Cloud Firestore.
-- **Backend logic:** Cloud Functions for Firebase, 2nd gen, written in TypeScript on Node 20.
+- **Backend logic:** Cloud Functions for Firebase, 2nd gen, written in TypeScript on Node 22 (Node 20 was retired for Cloud Functions on 2026-10-30).
   - All money math, share issuance, grading side effects and week transitions happen **server-side only**.
 - **Scheduling:** a scheduled Cloud Function runs every 5 minutes and locks any `open` week whose `lockAt <= now`.
 - **Billing:** deploying Cloud Functions requires the Blaze (pay-as-you-go) plan. Local development and testing run entirely in the Emulator Suite at no cost. Expected production usage is within the free allowances.

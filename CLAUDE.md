@@ -67,7 +67,7 @@ The owner (Zach) is the Admin and the only developer. He builds with Claude Code
 ## Stack
 
 - **Frontend:** React + TypeScript + Vite + Tailwind. Installable PWA; the design is mobile-first.
-- **Backend:** Cloud Functions for Firebase (2nd gen, TypeScript, Node 20), Firestore, Firebase Auth (Google + email link), Firebase Hosting.
+- **Backend:** Cloud Functions for Firebase (2nd gen, TypeScript, Node 22), Firestore, Firebase Auth (Google + email link), Firebase Hosting.
 - **Tests:** Vitest for `/shared`, the Firebase Emulator Suite for functions, and `@firebase/rules-unit-testing` for security rules.
 - **Environment:** all development and testing happens against the emulators. Deploying is done only in Milestone 7, when Zach asks.
 
