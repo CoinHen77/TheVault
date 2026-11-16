@@ -12,6 +12,7 @@ import Alerts from './screens/Alerts';
 import Book from './screens/Book';
 import Comments from './screens/Comments';
 import Dashboard from './screens/Dashboard';
+import PlayerHistory from './screens/PlayerHistory';
 import Rules from './screens/Rules';
 import SignIn from './screens/SignIn';
 import Standings from './screens/Standings';
@@ -53,6 +54,19 @@ function Gate() {
 /** Home, Week and Admin use two columns from 768px; the rest read best as one column. */
 const WIDE_TABS: ReadonlySet<Tab> = new Set(['dashboard', 'week', 'admin']);
 
+/** For the player page's back button. */
+const TAB_NAMES: Record<Tab, string> = {
+  dashboard: 'Home',
+  pick: 'Pick',
+  week: 'Week',
+  standings: COPY.sharpTitle,
+  book: COPY.bookTitle,
+  rules: COPY.rules,
+  comments: "Kade's",
+  alerts: 'Alerts',
+  admin: COPY.admin,
+};
+
 const TABS: ReadonlySet<string> = new Set<Tab>(['dashboard', 'pick', 'week', 'standings', 'book', 'rules', 'comments', 'alerts', 'admin']);
 
 /** A notification tap opens the app at /?tab=…; read it once, then tidy the URL. */
@@ -64,8 +78,19 @@ function initialTab(): Tab {
 
 function AppShell() {
   const { user, player, isAdmin, signOut } = useAuth();
-  const [tab, setTab] = useState<Tab>(initialTab);
+  const [tab, setTabState] = useState<Tab>(initialTab);
+  /** A player page opened from the current tab; changing tabs closes it. */
+  const [profileId, setProfileId] = useState<string | null>(null);
   const uid = user?.uid ?? null;
+
+  const setTab = (next: Tab) => {
+    setProfileId(null);
+    setTabState(next);
+  };
+  const openPlayer = (playerId: string) => {
+    setProfileId(playerId);
+    window.scrollTo(0, 0);
+  };
 
   // A notification tapped while the app is already open arrives as a message from the push worker.
   useEffect(() => {
@@ -120,15 +145,21 @@ function AppShell() {
         <main
           className={`mx-auto w-full flex-1 px-4 py-5 md:px-8 md:py-8 ${WIDE_TABS.has(tab) ? 'max-w-5xl' : 'max-w-2xl'}`}
         >
-          {tab === 'dashboard' && <Dashboard onNavigate={setTab} />}
-          {tab === 'pick' && <SubmitPick />}
-          {tab === 'week' && <WeekCard />}
-          {tab === 'standings' && <Standings />}
+          {profileId ? (
+            <PlayerHistory playerId={profileId} onBack={() => setProfileId(null)} backLabel={`Back to ${TAB_NAMES[tab]}`} />
+          ) : (
+            <>
+              {tab === 'dashboard' && <Dashboard onNavigate={setTab} onOpenPlayer={openPlayer} />}
+              {tab === 'pick' && <SubmitPick />}
+              {tab === 'week' && <WeekCard onOpenPlayer={openPlayer} />}
+              {tab === 'standings' && <Standings onOpenPlayer={openPlayer} />}
           {tab === 'book' && <Book />}
           {tab === 'rules' && <Rules />}
           {tab === 'comments' && <Comments />}
           {tab === 'alerts' && <Alerts />}
-          {tab === 'admin' && isAdmin && <Admin />}
+              {tab === 'admin' && isAdmin && <Admin />}
+            </>
+          )}
         </main>
 
         <BottomNav active={tab} onChange={setTab} />

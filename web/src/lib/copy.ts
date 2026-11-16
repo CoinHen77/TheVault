@@ -66,6 +66,7 @@ export const COPY = {
 
   // The Book / key
   earnedKey: 'You earned the key',
+  earnedKeyHere: 'Earned the key with this ticket',
   holdKey: 'You hold the key',
   keyGoesTo: 'Key goes to',
   capTaken: 'Taken from the vault',

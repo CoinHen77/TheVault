@@ -1,4 +1,7 @@
+import { collection, doc, onSnapshot } from 'firebase/firestore';
+import { useEffect, useState } from 'react';
 import type { BookBet, BuyIn, LedgerEntry, Pick, Preload, Standing, Week } from '@vault/shared';
+import { db } from '../lib/firebase';
 import { useCollectionData } from './useCollectionData';
 import { useDocData } from './useDocData';
 
@@ -59,4 +62,37 @@ export function useBookBets(seasonId: string | null, weekId: string | null, enab
 export function useLedger(seasonId: string | null) {
   const path = seasonId ? `seasons/${seasonId}/ledger` : null;
   return useCollectionData<LedgerEntry>(path);
+}
+
+/**
+ * One player's pick and the Book's legs for each of the given weeks, keyed by
+ * week id. Only pass weeks whose picks the viewer may read (SPEC.md §6): any
+ * week past `open`, or the viewer's own pick in the open week.
+ */
+export function usePlayerWeekPicks(seasonId: string | null, weekIds: string[], uid: string | null) {
+  const [picks, setPicks] = useState<Record<string, Pick | null>>({});
+  const [legs, setLegs] = useState<Record<string, string[]>>({});
+  const key = weekIds.join(',');
+
+  useEffect(() => {
+    setPicks({});
+    setLegs({});
+    if (!seasonId || !uid || !key) return;
+    const unsubs = key.split(',').flatMap((weekId) => [
+      onSnapshot(
+        doc(db, `seasons/${seasonId}/weeks/${weekId}/picks/${uid}`),
+        (snap) => setPicks((prev) => ({ ...prev, [weekId]: snap.exists() ? (snap.data() as Pick) : null })),
+        () => setPicks((prev) => ({ ...prev, [weekId]: null })),
+      ),
+      onSnapshot(
+        collection(db, `seasons/${seasonId}/weeks/${weekId}/bookBets`),
+        (snap) => setLegs((prev) => ({ ...prev, [weekId]: snap.docs.flatMap((d) => (d.data() as BookBet).legPickIds) })),
+        () => setLegs((prev) => ({ ...prev, [weekId]: [] })),
+      ),
+    ]);
+    return () => unsubs.forEach((u) => u());
+  }, [seasonId, key, uid]);
+
+  const loading = key !== '' && key.split(',').some((id) => !(id in picks));
+  return { picks, legs, loading };
 }

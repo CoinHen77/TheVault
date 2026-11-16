@@ -338,9 +338,11 @@ All functions are callable (HTTPS onCall) unless noted. Each function checks aut
 3. **Week Card**
    - All picks with owner, pick, odds and result badge, plus the week record (e.g. 3-5-0).
    - Before lock it shows only who has submitted, not what they picked.
+   - Past weeks (added 2026-11-16): arrows step back through every earlier week of the season, with the same tickets, record, Book and key decision. Tapping a ticket opens that player's page.
 4. **Sharp Standings**
    - Rank, player, W-L-P, units (green/red) and weeks bought in.
    - Top 3 get medals.
+   - Tapping a player opens their **player page** (added 2026-11-16): season line (W-L-P, units, weeks in, payout today), best hit (longest-odds win), current streak, weeks holding the key, a units-over-the-season chart, and every ticket newest first, each marked if it was used in the Book or earned the key. The open week's pick shows only on your own page, sealed. Home's season line opens your own page.
    - Payout today (added 2026-11-16): what each player would get if the season ended now, per §1.6: their share of the 90% Group Vault, plus the 10% Sharp award for the unit leader. While the lead is tied, the award is split evenly for display only; `finalizeSeason` still makes the Admin settle a real tie.
 5. **The Book** (the Bookholder can act; everyone can view)
    - Cap remaining.

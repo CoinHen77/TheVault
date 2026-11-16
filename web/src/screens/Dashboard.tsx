@@ -46,7 +46,13 @@ type WithId<T> = T & { id: string };
  * - a full recap of the last closed week;
  * - the latest posts from the comment section.
  */
-export default function Dashboard({ onNavigate }: { onNavigate: (tab: Tab) => void }) {
+export default function Dashboard({
+  onNavigate,
+  onOpenPlayer,
+}: {
+  onNavigate: (tab: Tab) => void;
+  onOpenPlayer: (playerId: string) => void;
+}) {
   const { user } = useAuth();
   const { season, week, players } = useVaultData();
   const uid = user?.uid ?? null;
@@ -159,15 +165,23 @@ export default function Dashboard({ onNavigate }: { onNavigate: (tab: Tab) => vo
             />
           )}
 
-          {myStanding && (
-            <p className="text-xs text-vault-gold-soft/60">
-              Season{' '}
-              <span className="font-mono text-vault-gold-soft/90">
-                {myStanding.wins}-{myStanding.losses}-{myStanding.pushes}
-              </span>{' '}
-              · <span className={`font-mono ${unitsTone(myStanding.units)}`}>{formatUnits(myStanding.units)}</span> ·{' '}
-              {ordinal(myIndex + 1)} in the Sharp
-            </p>
+          {myStanding && uid && (
+            <button
+              type="button"
+              onClick={() => onOpenPlayer(uid)}
+              className="flex min-h-11 items-center gap-1 self-start text-left text-xs text-vault-gold-soft/60 transition hover:text-vault-gold-soft"
+            >
+              <span>
+                Season{' '}
+                <span className="font-mono text-vault-gold-soft/90">
+                  {myStanding.wins}-{myStanding.losses}-{myStanding.pushes}
+                </span>{' '}
+                · <span className={`font-mono ${unitsTone(myStanding.units)}`}>{formatUnits(myStanding.units)}</span> ·{' '}
+                {ordinal(myIndex + 1)} in the Sharp
+              </span>
+              <span className="text-vault-gold/80">· My tickets</span>
+              <Icon name="arrowRight" className="h-3.5 w-3.5 text-vault-gold/80" />
+            </button>
           )}
 
           {season.requiredPreloadCents > 0 && (

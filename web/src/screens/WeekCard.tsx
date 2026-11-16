@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { useAuth } from '../auth/AuthProvider';
 import Envelope from '../components/heist/Envelope';
 import PickTicket from '../components/heist/PickTicket';
@@ -6,7 +6,7 @@ import Icon from '../components/Icon';
 import { EmptyState, WeekStatusPill } from '../components/ui';
 import { useLockReveal } from '../hooks/LockReveal';
 import { useVaultData } from '../hooks/VaultDataProvider';
-import { useBookBets, useBuyIns, usePicks } from '../hooks/useWeekData';
+import { useBookBets, useBuyIns, usePicks, useWeeks } from '../hooks/useWeekData';
 import { COPY } from '../lib/copy';
 import { weekLabel } from '../lib/format';
 import { keyDecisionReason } from '../lib/keyDecision';
@@ -14,12 +14,25 @@ import { keyDecisionReason } from '../lib/keyDecision';
 /**
  * Week Card (SPEC.md §7 screen 3). Before lock: an envelope per paid player,
  * showing only who has sealed a pick. After lock: every ticket, stamped once
- * graded, plus the week record and who holds the key.
+ * graded, plus the week record and who holds the key. The arrows step back
+ * through earlier weeks; tap a ticket to open that player's page.
  */
-export default function WeekCard() {
+export default function WeekCard({ onOpenPlayer }: { onOpenPlayer: (playerId: string) => void }) {
   const { user } = useAuth();
-  const { season, week, players } = useVaultData();
+  const { season, week: currentWeek, players } = useVaultData();
   const seasonId = season?.id ?? null;
+
+  // Every week up to this one, oldest first; null shows the current week.
+  const { data: allWeeks } = useWeeks(seasonId);
+  const navWeeks = (allWeeks ?? []).filter((w) => w.order <= (currentWeek?.order ?? Infinity));
+  const [viewId, setViewId] = useState<string | null>(null);
+  const week = (viewId ? navWeeks.find((w) => w.id === viewId) : null) ?? currentWeek;
+  const isCurrent = Boolean(week && week.id === currentWeek?.id);
+  const navIndex = week ? navWeeks.findIndex((w) => w.id === week.id) : -1;
+  const prevWeek = navIndex > 0 ? navWeeks[navIndex - 1] : undefined;
+  const nextWeek = navIndex >= 0 ? navWeeks[navIndex + 1] : undefined;
+  const showWeek = (id: string) => setViewId(id === currentWeek?.id ? null : id);
+
   const weekId = week?.id ?? null;
   const revealed = Boolean(week) && week!.status !== 'open';
 
@@ -31,7 +44,7 @@ export default function WeekCard() {
   // one after another (after the door overlay, if it's still playing).
   const { playing, flipWeekId, consumeFlip } = useLockReveal();
   // Cleared when the last ticket finishes flipping, so it runs once per week.
-  const flip = revealed && flipWeekId !== null && flipWeekId === weekId && Boolean(allPicks?.length);
+  const flip = isCurrent && revealed && flipWeekId !== null && flipWeekId === weekId && Boolean(allPicks?.length);
   // Fix the start delay when the flip begins, so it doesn't jump when the overlay ends.
   const flipStartRef = useRef<number | null>(null);
   if (!flip) flipStartRef.current = null;
@@ -68,8 +81,18 @@ export default function WeekCard() {
     <div className="flex flex-col gap-5">
       <header className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <h1 className="font-display text-2xl font-bold text-vault-gold">{weekLabel(week)}</h1>
+          <div className="flex min-w-0 items-center gap-1">
+            <WeekArrow
+              direction="prev"
+              label={prevWeek ? weekLabel(prevWeek) : undefined}
+              onClick={prevWeek ? () => showWeek(prevWeek.id) : undefined}
+            />
+            <h1 className="truncate font-display text-2xl font-bold text-vault-gold">{weekLabel(week)}</h1>
+            <WeekArrow
+              direction="next"
+              label={nextWeek ? weekLabel(nextWeek) : undefined}
+              onClick={nextWeek ? () => showWeek(nextWeek.id) : undefined}
+            />
             <WeekStatusPill status={week.status} />
           </div>
           {revealed ? (
@@ -95,9 +118,23 @@ export default function WeekCard() {
           </div>
         )}
         <p className="text-sm text-vault-gold-soft/60">
-          {revealed
-            ? `${COPY.vaultOpen}. Here's everyone's ticket.`
-            : 'Every envelope unseals the moment the vault opens.'}
+          {!isCurrent
+            ? "Here's how everyone's ticket finished."
+            : revealed
+              ? `${COPY.vaultOpen}. Here's everyone's ticket.`
+              : 'Every envelope unseals the moment the vault opens.'}
+          {!isCurrent && currentWeek && (
+            <>
+              {' '}
+              <button
+                type="button"
+                onClick={() => setViewId(null)}
+                className="text-vault-gold underline-offset-2 hover:underline"
+              >
+                Back to {weekLabel(currentWeek)}
+              </button>
+            </>
+          )}
         </p>
       </header>
 
@@ -141,13 +178,20 @@ export default function WeekCard() {
                 style={flip ? { animationDelay: `${(flipStartRef.current ?? 150) + i * 110}ms` } : undefined}
                 onAnimationEnd={flip && i === allPicks.length - 1 ? consumeFlip : undefined}
               >
-                <PickTicket
-                  pick={p}
-                  week={week}
-                  sealed={false}
-                  usedInBook={bookLegIds.has(p.id)}
-                  subtitleOverride={`${p.id === user?.uid ? 'You' : nameOf(p.id)}${p.gameText ? ` · ${p.gameText}` : ''}`}
-                />
+                <button
+                  type="button"
+                  onClick={() => onOpenPlayer(p.id)}
+                  aria-label={`${nameOf(p.id)}: see every ticket`}
+                  className="block w-full rounded-xl text-left transition hover:brightness-110"
+                >
+                  <PickTicket
+                    pick={p}
+                    week={week}
+                    sealed={false}
+                    usedInBook={bookLegIds.has(p.id)}
+                    subtitleOverride={`${p.id === user?.uid ? 'You' : nameOf(p.id)}${p.gameText ? ` · ${p.gameText}` : ''}`}
+                  />
+                </button>
               </li>
             ))}
         </ul>
@@ -166,5 +210,28 @@ export default function WeekCard() {
         )}
       </div>
     </div>
+  );
+}
+
+/** Steps to the previous or next week; dimmed at either end. */
+function WeekArrow({
+  direction,
+  label,
+  onClick,
+}: {
+  direction: 'prev' | 'next';
+  label: string | undefined;
+  onClick: (() => void) | undefined;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={!onClick}
+      aria-label={label ? `Show ${label}` : direction === 'prev' ? 'No earlier week' : 'No later week'}
+      className="flex h-11 w-9 shrink-0 items-center justify-center rounded-lg text-vault-gold-soft/70 transition hover:text-vault-gold disabled:opacity-20"
+    >
+      <Icon name="arrowRight" className={`h-5 w-5 ${direction === 'prev' ? 'rotate-180' : ''}`} />
+    </button>
   );
 }
